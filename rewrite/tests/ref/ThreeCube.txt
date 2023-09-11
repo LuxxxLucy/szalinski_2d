@@ -1,0 +1,3 @@
+(Fold
+ Union
+ (MapI 3 (Affine Trans (Vec3 0 (* 10 i) 0) (Cube (Vec3 20 20 3) false))))

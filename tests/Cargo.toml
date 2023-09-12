@@ -1,0 +1,18 @@
+[package]
+name = "szlanski-tests"
+version.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish = false
+
+[dev-dependencies]
+szalinski-egg = { path = "../rewrite" }
+
+rayon = "1.7.0"
+walkdir = "2"
+
+[[test]]
+name = "tests"
+path = "src/tests.rs"
+harness = false
+

@@ -234,12 +234,7 @@ pub struct TestCase {
 fn compare(a: &str, b: &str) -> bool {
     let a = String::from(a);
     let b = String::from(b);
-    fn trim(s: String) -> String {
-        s
-            .replace('\n', "")
-            .replace(' ', "")
-
-    }
+    let trim = |s: String| s.replace(&['\n', ' '][..], "");
     let trim_a = trim(a);
     let trim_b = trim(b);
     trim_a.eq(&trim_b)

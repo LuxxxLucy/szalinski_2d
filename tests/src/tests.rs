@@ -1,4 +1,5 @@
 use std::ffi::OsStr;
+use std::io::{self, Write};
 
 extern crate walkdir;
 use walkdir::WalkDir;
@@ -24,18 +25,59 @@ impl TestWorld {
             id: 0,
         }
     }
+
 }
 
 #[derive(Debug, Clone)]
 pub struct TestCase {
+    name: String,
     program_path: PathBuf,
     raw_path: PathBuf,
     ref_path: PathBuf,
     report_path: PathBuf,
 }
 
-fn main() {
+fn compare(a: &str, b: &str) -> bool {
+    let a = String::from(a);
+    let b = String::from(b);
+    let trim_a = a.trim();
+    let trim_b = b.trim();
+    trim_a.eq(trim_b)
+}
 
+fn run(test_case: TestCase, world: &TestWorld) -> bool {
+    println!("run test {}", world.id);
+    let mut ok = true;
+
+    // todo: change the program_dir into a dir_path in test case.
+    let name = &test_case.name;
+    // let program_path = &test_case.program_path;
+    let program_path = &test_case.ref_path;
+    let ref_program_path = &test_case.ref_path;
+
+    let res_program = std::fs::read_to_string(program_path).expect("Unable to read file");
+    let ref_program = std::fs::read_to_string(ref_program_path).expect("Unable to read file");
+
+    println!("source is {}", res_program);
+    println!("reference is {}", ref_program);
+
+    if !compare(&res_program, &ref_program) {
+        println!("is not equal!");
+        ok = false;
+    }
+
+    let mut stdout = std::io::stdout().lock();
+    // stdout.write_all(name.to_string_lossy().as_bytes()).unwrap();
+    stdout.write_all(name.as_bytes()).unwrap();
+    if ok {
+        writeln!(stdout, " ✔").unwrap();
+    } else {
+        writeln!(stdout, " ❌").unwrap();
+    }
+    ok
+}
+
+fn main() {
     let mut world = TestWorld::new();
 
     println!("Running tests...");
@@ -59,6 +101,7 @@ fn main() {
             // }
         })
         .map_with(world, |world, src_path| {
+            // TODO: wrap into Ok.
             let path = src_path.strip_prefix(PROGRAM_DIR).unwrap();
 
             println!("the name is {}", path.display());
@@ -67,24 +110,20 @@ fn main() {
             let ref_path = Path::new(REF_DIR).join(path);
             let report_path = Path::new(REPORT_DIR).join(path);
 
-            TestCase {
+            let test_case = TestCase {
+                name: path.display().to_string(),
                 program_path,
                 raw_path,
                 ref_path,
                 report_path,
-            }
+            };
+            run(test_case, world)
         })
         .collect::<Vec<_>>();
 
-    // TODO: change to actual testing function in the map_with and remove
-    // the printing the below iter map for ok.
-    for r in results.iter() {
-        println!("test case {:?}", r);
-    }
-
     let len = results.len();
     let ok = results.iter().map(|_| 1).sum::<usize>();
-    if len > 1 {
+    if len >= 1 {
         println!("{ok} / {len} tests passed.");
     }
 

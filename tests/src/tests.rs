@@ -263,30 +263,49 @@ fn compare(a: &str, b: &str) -> bool {
     trim_a.eq(&trim_b)
 }
 
-fn run(test_case: TestCase, world: &TestWorld) -> bool {
+fn export_program(path: &Path, data: &str) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, data).unwrap();
+}
+
+fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
     println!("run test {}", world.id);
+    let mut stdout = std::io::stdout().lock();
+
     let mut ok = true;
+    let mut updated = false;
+
+    println!("update is {}", args.update);
 
     // todo: change the program_dir into a dir_path in test case.
     let name = &test_case.name;
     let program_path = &test_case.program_path;
     let ref_program_path = &test_case.ref_path;
 
+    stdout.write_all(name.as_bytes()).unwrap();
+
     let src_program = std::fs::read_to_string(program_path).expect("Unable to read file");
     let res_program = optimize(&src_program);
-    let ref_program = std::fs::read_to_string(ref_program_path).expect("Unable to read file");
-
-    println!("source is {}", src_program);
-    println!("result is {}", res_program);
-    println!("reference is {}", ref_program);
-
-    if !compare(&res_program, &ref_program) {
-        println!("is not equal!");
-        ok = false;
+    if let Ok(ref_program) = std::fs::read_to_string(ref_program_path) {
+        if !compare(&res_program, &ref_program) {
+            if args.update {
+                export_program(ref_program_path, &res_program);
+                updated = true;
+            } else {
+                writeln!(stdout, "  Does not match reference image.").unwrap();
+                ok = false;
+            }
+        }
+    } else {
+        if args.update {
+            export_program(ref_program_path, &res_program);
+            updated = true;
+        } else {
+            writeln!(stdout, "  Failed to open reference image.").unwrap();
+            ok = false;
+        }
     }
 
-    let mut stdout = std::io::stdout().lock();
-    stdout.write_all(name.as_bytes()).unwrap();
     if ok {
         writeln!(stdout, " ✔").unwrap();
     } else {
@@ -336,7 +355,7 @@ fn main() {
                 ref_path,
                 report_path,
             };
-            run(test_case, world)
+            run(test_case, &args, world)
         })
         .collect::<Vec<_>>();
 

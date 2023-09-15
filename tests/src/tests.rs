@@ -1,6 +1,13 @@
+#[warn(non_snake_case)] // TODO: remove it
+
 use std::ffi::OsStr;
 use std::io::{self, Write};
 
+// For Arg
+extern crate clap;
+use clap::Parser;
+
+// For looping over of the file system.
 extern crate walkdir;
 use walkdir::WalkDir;
 use std::path::{Path, PathBuf};
@@ -207,6 +214,22 @@ const PROGRAM_DIR: &str = "program";
 const REF_DIR: &str = "ref";
 const REPORT_DIR: &str = "report";
 
+#[derive(Debug, Clone, Parser)]
+#[clap(name = "bin-test", author)]
+struct Args {
+    filter: Vec<String>,
+    /// runs only the specified subtest
+    #[arg(long, default_value_t = false)]
+    update: bool,
+}
+
+impl Args {
+    fn matches(&self, path: &Path) -> bool {
+        let path = path.to_string_lossy();
+        self.filter.is_empty() || self.filter.iter().any(|v| path.contains(v))
+    }
+}
+
 /// A world that provides access to the tests environment.
 #[derive(Clone)]
 struct TestWorld {
@@ -263,7 +286,6 @@ fn run(test_case: TestCase, world: &TestWorld) -> bool {
     }
 
     let mut stdout = std::io::stdout().lock();
-    // stdout.write_all(name.to_string_lossy().as_bytes()).unwrap();
     stdout.write_all(name.as_bytes()).unwrap();
     if ok {
         writeln!(stdout, " ✔").unwrap();
@@ -274,6 +296,8 @@ fn run(test_case: TestCase, world: &TestWorld) -> bool {
 }
 
 fn main() {
+    let args = Args::parse();
+
     let mut world = TestWorld::new();
 
     println!("Running tests...");
@@ -288,13 +312,12 @@ fn main() {
                 return None;
             }
 
-            Some(src_path)
             // TODO: add matching and arg
-            // if args.matches(&src_path) {
-            //     Some(src_path)
-            // } else {
-            //     None
-            // }
+            if args.matches(&src_path) {
+                Some(src_path)
+            } else {
+                None
+            }
         })
         .map_with(world, |world, src_path| {
             // TODO: wrap into Ok.
@@ -321,6 +344,8 @@ fn main() {
     let ok = results.iter().map(|_| 1).sum::<usize>();
     if len >= 1 {
         println!("{ok} / {len} tests passed.");
+    } else {
+        println!("{len} tests found matching the given pattern {0:#?}", args.filter);
     }
 
     if ok != len {

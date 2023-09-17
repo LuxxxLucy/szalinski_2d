@@ -1,8 +1,8 @@
 [package]
-name = "g-egg"
+name = "rewrite"
 version = "0.1.0"
 authors = ["Jialin Lu <luxxxlucy@gmail.com>"]
-edition = "2023"
+edition = "2018"
 
 
 [dependencies]

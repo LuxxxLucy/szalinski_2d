@@ -15,9 +15,7 @@ use std::path::{Path, PathBuf};
 extern crate rayon;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-extern crate szalinski_egg;
-// use szalinski-egg::interface::optimize;
-
+extern crate rewrite;
 
 // ==============================================================
 extern crate log;
@@ -31,9 +29,8 @@ use serde::Serialize;
 
 use egg::*;
 use std::default::Default;
-use szalinski_egg::cad::{Cad, Cost, CostFn, MetaAnalysis};
-use szalinski_egg::eval::{remove_empty, Scad};
-use szalinski_egg::sz_param;
+use rewrite::cad::{Cad, Cost, CostFn, MetaAnalysis};
+use rewrite::eval::{remove_empty, Scad};
 
 #[derive(Serialize)]
 pub struct RunResult {
@@ -143,7 +140,7 @@ pub fn optimize(input: &str) -> String {
     let initial_cost = CostFn.cost_rec(&initial_expr);
 
     let initial_expr = if PRE_EXTRACT {
-        let pre_rules = szalinski_egg::rules::pre_rules();
+        let pre_rules = rewrite::rules::pre_rules();
         let runner = MyRunner::new(MetaAnalysis::default())
             .with_iter_limit(ITERATIONS)
             .with_node_limit(NODE_LIMIT)
@@ -157,7 +154,7 @@ pub fn optimize(input: &str) -> String {
         initial_expr
     };
 
-    let rules = szalinski_egg::rules::rules();
+    let rules = rewrite::rules::rules();
     let runner = MyRunner::new(MetaAnalysis::default())
         .with_iter_limit(ITERATIONS)
         .with_node_limit(NODE_LIMIT)

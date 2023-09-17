@@ -1,5 +1,5 @@
 [package]
-name = "szlanski-tests"
+name = "houjing-tests"
 version.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -23,7 +23,7 @@ rand_pcg = "0.2"
 egg = { version = "0.9.2", features = ["serde-1"] }
 # optimize end
 
-szalinski-egg = { path = "../rewrite" }
+rewrite = { path = "../rewrite" }
 
 # cmd line arg
 clap = { version = "4.2.4", features = ["derive"] }

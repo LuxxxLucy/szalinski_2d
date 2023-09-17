@@ -25,8 +25,13 @@ egg = { version = "0.9.2", features = ["serde-1"] }
 
 szalinski-egg = { path = "../rewrite" }
 
-rayon = "1.7.0"
+# cmd line arg
+clap = { version = "4.2.4", features = ["derive"] }
+
+# loop over the directory
 walkdir = "2"
+# parallel running
+rayon = "1.7.0"
 
 [[test]]
 name = "tests"

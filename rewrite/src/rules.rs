@@ -82,8 +82,8 @@ pub fn pre_rules() -> Vec<Rewrite> {
 #[rustfmt::skip]
 pub fn rules() -> Vec<Rewrite> {
 
-    sz_param!(CAD_IDENTS: bool);
-    sz_param!(INV_TRANS: bool);
+    let CAD_IDENTS = true;
+    let INV_TRANS = true;
 
     let mut rules = vec![
         // rw!("union_comm"; "(Binop Union ?a ?b)" => "(Binop Union ?b ?a)"),
@@ -162,7 +162,7 @@ pub fn rules() -> Vec<Rewrite> {
 
     ];
 
-    if *INV_TRANS {
+    if INV_TRANS {
         rules.extend(vec![
             // rw("map_unpart_r",
             //    "(Map2 ?op
@@ -240,7 +240,7 @@ pub fn rules() -> Vec<Rewrite> {
         ]);
     }
 
-    if *CAD_IDENTS {
+    if CAD_IDENTS {
         rules.extend(vec![
             rw!("scale_flip"; "(Affine Scale (Vec3 -1 -1 1) ?a)"=> "(Affine Rotate (Vec3 0 0 180) ?a)"),
 
@@ -365,7 +365,7 @@ pub fn rules() -> Vec<Rewrite> {
     ));
 
 
-    if *CAD_IDENTS {
+    if CAD_IDENTS {
         // add the intro rules only for cads
         let id_affines = &[
             ("scale", "Affine Scale (Vec3 1 1 1)"),
@@ -442,8 +442,8 @@ where
     K: Hash + Eq + Debug + Clone,
 {
     // allow easy disabling
-    sz_param!(PARTITIONING: bool);
-    if !*PARTITIONING {
+    let PARTITIONING=true;
+    if !PARTITIONING {
         return None;
     }
 
@@ -457,8 +457,8 @@ where
         ids.push(id);
     }
 
-    sz_param!(PARTITIONING_MAX: usize);
-    if parts.len() <= 1 || parts.len() > *PARTITIONING_MAX {
+    let PARTITIONING_MAX=5;
+    if parts.len() <= 1 || parts.len() > PARTITIONING_MAX {
         return None;
     }
     // println!("parts: {:?}", parts);
@@ -522,7 +522,8 @@ fn get_affines(egraph: &EGraph, id: Id, affine_kind: &Cad) -> Vec<(Id, Id)> {
         .collect()
 }
 
-sz_param!(AFFINE_SIGNATURE_MAX_LEN: usize);
+const AFFINE_SIGNATURE_MAX_LEN: usize = 10;
+
 type AffineSig = [usize; 3];
 fn affine_signature(egraph: &EGraph, id: Id) -> AffineSig {
     let mut scales = 0;
@@ -547,7 +548,7 @@ fn affine_signature(egraph: &EGraph, id: Id) -> AffineSig {
 }
 
 // HACK just part a hard limit here so it doesn't get out of hand
-sz_param!(STRUCTURE_MATCH_LIMIT: usize);
+const STRUCTURE_MATCH_LIMIT: usize = 1000;
 
 fn insert_map2s(egraph: &mut EGraph, list_ids: &[Id]) -> Vec<Id> {
     let mut results = vec![];
@@ -574,17 +575,17 @@ fn insert_map2s(egraph: &mut EGraph, list_ids: &[Id]) -> Vec<Id> {
         let unique_sig_lengths = || unique_sigs.iter().map(|&sig| sig[cadi]);
 
         let total: usize = unique_sig_lengths().product();
-        if total > *STRUCTURE_MATCH_LIMIT {
+        if total > STRUCTURE_MATCH_LIMIT {
             warn!(
                 "Exceeding structure match limit: {} > {}",
-                total, *STRUCTURE_MATCH_LIMIT
+                total, STRUCTURE_MATCH_LIMIT
             );
         }
 
         for choices in unique_sig_lengths()
             .map(|len| 0..len)
             .multi_cartesian_product()
-            .take(*STRUCTURE_MATCH_LIMIT)
+            .take(STRUCTURE_MATCH_LIMIT)
         {
             let (param_ids, cad_ids): (Vec<Id>, Vec<Id>) = affs_list
                 .iter()

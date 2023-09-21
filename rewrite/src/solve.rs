@@ -8,6 +8,7 @@ use crate::{
     cad::{Cad, EGraph, ListVar as LV, Vec3},
     num::Num,
     permute::Permutation,
+    hyperparameters::SOLVE_ROUND,
 };
 
 use egg::Id;
@@ -72,8 +73,6 @@ struct Deg2 {
     b: f64,
     c: f64,
 }
-
-const SOLVE_ROUND: f64=0.01;
 
 fn solve_deg1(vs: &[Num]) -> Option<Deg1> {
     let i1 = 0.0;

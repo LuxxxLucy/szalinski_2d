@@ -5,14 +5,10 @@ use egg::Language;
 use log::*;
 
 use crate::cad::{Cad, EGraph};
+use crate::hyperparameters::{ABS_EPSILON, REL_EPSILON};
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct Num(ordered_float::NotNan<f64>);
-
-const ABS_EPSILON: f64 = 0.0001;
-const REL_EPSILON: f64 = 0.0001;
-
-// const ROUND_RELATIVE: f64 = 0.01;
 
 pub fn num(n: impl Into<Num>) -> Num {
     n.into()

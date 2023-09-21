@@ -10,6 +10,13 @@ use crate::{
     cad::{Cad, EGraph, MetaAnalysis, Rewrite, Vec3},
     num::{num, Num},
     permute::{Partitioning, Permutation},
+    hyperparameters::{CAD_IDENTS,
+                      INV_TRANS,
+                      PARTITIONING,
+                      PARTITIONING_MAX,
+                      AFFINE_SIGNATURE_MAX_LEN,
+                      STRUCTURE_MATCH_LIMIT
+                    },
 };
 
 fn is_not_zero(var: &'static str) -> impl Fn(&mut EGraph, Id, &Subst) -> bool {
@@ -81,9 +88,6 @@ pub fn pre_rules() -> Vec<Rewrite> {
 
 #[rustfmt::skip]
 pub fn rules() -> Vec<Rewrite> {
-
-    let CAD_IDENTS = true;
-    let INV_TRANS = true;
 
     let mut rules = vec![
         // rw!("union_comm"; "(Binop Union ?a ?b)" => "(Binop Union ?b ?a)"),
@@ -442,7 +446,6 @@ where
     K: Hash + Eq + Debug + Clone,
 {
     // allow easy disabling
-    let PARTITIONING=true;
     if !PARTITIONING {
         return None;
     }
@@ -457,7 +460,6 @@ where
         ids.push(id);
     }
 
-    let PARTITIONING_MAX=5;
     if parts.len() <= 1 || parts.len() > PARTITIONING_MAX {
         return None;
     }
@@ -522,8 +524,6 @@ fn get_affines(egraph: &EGraph, id: Id, affine_kind: &Cad) -> Vec<(Id, Id)> {
         .collect()
 }
 
-const AFFINE_SIGNATURE_MAX_LEN: usize = 10;
-
 type AffineSig = [usize; 3];
 fn affine_signature(egraph: &EGraph, id: Id) -> AffineSig {
     let mut scales = 0;
@@ -546,9 +546,6 @@ fn affine_signature(egraph: &EGraph, id: Id) -> AffineSig {
     rotates = AFFINE_SIGNATURE_MAX_LEN.min(rotates);
     [translates, scales, rotates]
 }
-
-// HACK just part a hard limit here so it doesn't get out of hand
-const STRUCTURE_MATCH_LIMIT: usize = 1000;
 
 fn insert_map2s(egraph: &mut EGraph, list_ids: &[Id]) -> Vec<Id> {
     let mut results = vec![];

@@ -8,15 +8,12 @@ use egg::{rewrite as rw, *};
 
 use crate::{
     cad::{Cad, EGraph, MetaAnalysis, Rewrite, Vec3},
+    hyperparameters::{
+        AFFINE_SIGNATURE_MAX_LEN, CAD_IDENTS, INV_TRANS, PARTITIONING, PARTITIONING_MAX,
+        STRUCTURE_MATCH_LIMIT,
+    },
     num::{num, Num},
     permute::{Partitioning, Permutation},
-    hyperparameters::{CAD_IDENTS,
-                      INV_TRANS,
-                      PARTITIONING,
-                      PARTITIONING_MAX,
-                      AFFINE_SIGNATURE_MAX_LEN,
-                      STRUCTURE_MATCH_LIMIT
-                    },
 };
 
 fn is_not_zero(var: &'static str) -> impl Fn(&mut EGraph, Id, &Subst) -> bool {

@@ -6,9 +6,9 @@ use indexmap::{indexset, IndexMap};
 
 use crate::{
     cad::{Cad, EGraph, ListVar as LV, Vec3},
+    hyperparameters::SOLVE_ROUND,
     num::Num,
     permute::Permutation,
-    hyperparameters::SOLVE_ROUND,
 };
 
 use egg::Id;

@@ -29,8 +29,8 @@ macro_rules! sz_param {
     }
 }
 
-pub mod hyperparameters;
 pub mod cad;
+pub mod hyperparameters;
 pub mod rules;
 
 pub mod eval;

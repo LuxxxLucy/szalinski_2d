@@ -1,5 +1,4 @@
 #[warn(non_snake_case)] // TODO: remove it
-
 use std::ffi::OsStr;
 use std::io::{self, Write};
 
@@ -9,8 +8,8 @@ use clap::Parser;
 
 // For looping over of the file system.
 extern crate walkdir;
-use walkdir::WalkDir;
 use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
 
 extern crate rayon;
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -18,9 +17,9 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 extern crate rewrite;
 
 // ==============================================================
+extern crate egg;
 extern crate log;
 extern crate serde;
-extern crate egg;
 
 use std::time::{Duration, Instant};
 
@@ -28,9 +27,9 @@ use log::*;
 use serde::Serialize;
 
 use egg::*;
-use std::default::Default;
 use rewrite::cad::{Cad, Cost, CostFn, MetaAnalysis};
 use rewrite::eval::{remove_empty, Scad};
+use std::default::Default;
 
 #[derive(Serialize)]
 pub struct RunResult {
@@ -122,11 +121,10 @@ impl IterationData<Cad, MetaAnalysis> for MyIterData {
 type MyRunner = egg::Runner<Cad, MetaAnalysis, MyIterData>;
 
 pub fn optimize(input: &str) -> String {
-
     let ITERATIONS = 50000;
-    let NODE_LIMIT=3000000;
-    let TIMEOUT=10;
-    let PRE_EXTRACT=true;
+    let NODE_LIMIT = 3000000;
+    let TIMEOUT = 10;
+    let PRE_EXTRACT = true;
 
     println!("input is {}", input);
     let initial_expr: RecExpr<_> = input.parse().expect("Couldn't parse input");
@@ -205,7 +203,6 @@ pub fn optimize(input: &str) -> String {
 }
 // ============================================
 
-
 const RAW_DIR: &str = "raw";
 const PROGRAM_DIR: &str = "program";
 const REF_DIR: &str = "ref";
@@ -235,11 +232,8 @@ struct TestWorld {
 
 impl TestWorld {
     fn new() -> Self {
-        Self {
-            id: 0,
-        }
+        Self { id: 0 }
     }
-
 }
 
 #[derive(Debug, Clone)]
@@ -361,7 +355,10 @@ fn main() {
     if len >= 1 {
         println!("{ok} / {len} tests passed.");
     } else {
-        println!("{len} tests found matching the given pattern {0:#?}", args.filter);
+        println!(
+            "{len} tests found matching the given pattern {0:#?}",
+            args.filter
+        );
     }
 
     if ok != len {

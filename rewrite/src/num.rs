@@ -4,8 +4,10 @@ use std::str::FromStr;
 use egg::Language;
 use log::*;
 
-use crate::cad::{Cad, EGraph};
-use crate::hyperparameters::{ABS_EPSILON, REL_EPSILON};
+use crate::{
+    hyperparameters::{ABS_EPSILON, REL_EPSILON},
+    cad::{Cad, EGraph},
+};
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct Num(ordered_float::NotNan<f64>);

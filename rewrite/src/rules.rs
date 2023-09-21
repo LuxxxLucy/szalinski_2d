@@ -59,27 +59,6 @@ pub fn pre_rules() -> Vec<Rewrite> {
                 Flatten { list, op }
             }
         ),
-
-        // rw!("union_consr"; "(Binop Union (Fold Union ?list) ?a)" => "(Fold Union (Cons ?a ?list))"),
-        // rw!("inter_consr"; "(Binop Inter (Fold Inter ?list) ?a)" => "(Fold Inter (Cons ?a ?list))"),
-
-        // TODO can't parse this now
-        // rw!("consl"; "(Binop ?bop (Fold ?bop (List ?items...)) ?a)" => "(Fold ?bop (List ?items... ?a))"),
-
-        //     "(Fold Union (List (Fold Union (List ?list...)) ?rest...))" =>
-        //     "(Fold Union (List ?rest... ?list...))"),
-        // rw!("flatten_inter";
-        //     "(Fold Inter (List (Fold Inter (List ?list...)) ?rest...))" =>
-        //     "(Fold Inter (List ?rest... ?list...))"),
-
-        // rw!("union_consr"; "(Binop Union ?a (Fold Union ?list))" => "(Fold Union (Cons ?a ?list))"),
-        // rw!("inter_consr"; "(Binop Inter ?a (Fold Inter ?list))" => "(Fold Inter (Cons ?a ?list))"),
-        // rw!("list_nil"; "Nil" => "(List)"),
-        // rw!("list_cons"; "(Cons ?a (List ?b...))" => "(List ?a ?b...)"),
-        // rw!("nil_list"; "(List)" => "Nil"),
-        // rw!("cons_list"; "(List ?a ?b...)" => "(Cons ?a (List ?b...))"),
-
-
     ]
 }
 
@@ -87,23 +66,7 @@ pub fn pre_rules() -> Vec<Rewrite> {
 pub fn rules() -> Vec<Rewrite> {
 
     let mut rules = vec![
-        // rw!("union_comm"; "(Binop Union ?a ?b)" => "(Binop Union ?b ?a)"),
-        // rw!("inter_comm"; "(Binop Inter ?a ?b)" => "(Binop Inter ?b ?a)"),
-        // rw!("fold_nil"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
-        // rw!("fold_cons"; "(Binop ?bop ?a (Fold ?bop ?list))" => "(Fold ?bop (Cons ?a ?list))"),
-        // rw!("union_consr"; "(Binop Union (Fold Union ?list) ?a)" => "(Fold Union (Cons ?a ?list))"),
-        // rw!("inter_consr"; "(Binop Inter (Fold Inter ?list) ?a)" => "(Fold Inter (Cons ?a ?list))"),
-
-        // rw("flatten_union",
-        //    "(Fold Union (List (Fold Union (List ?list...)) ?rest...))",
-        //    "(Fold Union (List ?rest... ?list...))"),
-        // rw("flatten_inter",
-        //    "(Fold Inter (List (Fold Inter (List ?list...)) ?rest...))",
-        //    "(Fold Inter (List ?rest... ?list...))"),
-
-
         // math rules
-
         rw!("add_comm"; "(+ ?a ?b)" => "(+ ?b ?a)"),
         rw!("add_zero"; "(+ 0 ?a)" => "?a"),
 
@@ -120,19 +83,11 @@ pub fn rules() -> Vec<Rewrite> {
             if is_not_zero("?a")),
         rw!("div_mul"; "(/ (* ?a ?b) ?a)" => "?b"
             if is_not_zero("?a")),
-        // rw!("mul_div_div"; "(* (/ ?a ?b) (/ ?c ?d))" => "(/ (* ?a ?c) (* ?b ?d))"),
-        // rw!("div_div"; "(/ (/ ?a ?b) ?a)" => "(/ 1 ?b)"),
 
         // list rules
-
         rw!("fold_nil"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
 
         // cad rules
-
-        // rw("diff_to_union",
-        //    "(Fold Diff (List ?a ?rest...))",
-        //    "(Binop Diff ?a (Fold Union (List ?rest...)))"),
-
         rw!("fold_repeat"; "(Fold ?bop (Map2 ?aff (Repeat ?n ?param) ?cads))"=> "(Affine ?aff ?param (Fold ?bop ?cads))"),
 
         rw!("fold_op"; "(Fold ?bop (Affine ?aff ?param ?cad))"=> "(Affine ?aff ?param (Fold ?bop ?cad))"),
@@ -160,19 +115,10 @@ pub fn rules() -> Vec<Rewrite> {
             "(MapI ?n1 ?n2 (Affine ?op ?formula ?cad))"
             if is_eq("?n", "(* ?n1 ?n2)")),
         rw!("mapi2_mapi2"; "(Map2 ?op (MapI ?n1 ?n2 ?param) (MapI ?n1 ?n2 ?cad))"=> "(MapI ?n1 ?n2 (Affine ?op ?param ?cad))"),
-
     ];
 
     if INV_TRANS {
         rules.extend(vec![
-            // rw("map_unpart_r",
-            //    "(Map2 ?op
-            //       (List ?params...)
-            //       (Unpart ?part ?cads))",
-            //    "(Map2 ?op
-            //       (Unpart ?part (Part ?part (List ?params...)))
-            //       (Unpart ?part ?cads))"),
-
             rw!("map_unpart_r2";
                "  (Map2 ?op ?params (Unpart ?part ?cads))" =>
                "(Unpart ?part (Part ?part
@@ -201,28 +147,6 @@ pub fn rules() -> Vec<Rewrite> {
                "(Unsort ?perm (Sort ?perm
               (Map2 ?op ?params (Unsort ?perm ?cads))))"),
 
-            // rw("sort_map2",
-            //    "(Sort ?perm (Map2 ?op ?params ?cads))",
-            //    "(Map2 ?op (Sort ?perm ?params) (Sort ?perm ?cads))"),
-
-            // rw("map_unsort_l",
-            //    "(Map2 ?op
-            //       (Unsort ?perm ?params)
-            //       ?cads)",
-            //    "(Unsort ?perm
-            //       (Map2 ?op
-            //         ?params
-            //         (Sort ?perm ?cads)))"),
-
-            // rw("map_unsort_r",
-            //    "(Map2 ?op
-            //       ?params
-            //       (Unsort ?perm ?cads))",
-            //    "(Unsort ?perm
-            //       (Map2 ?op
-            //         (Sort ?perm ?params)
-            //         ?cads))"),
-
             rw!("unsort_repeat"; "(Unsort ?perm (Repeat ?n ?elem))"=> "(Repeat ?n ?elem)"),
 
             rw!("fold_union_unsort"; "(Fold Union (Unsort ?perm ?x))"=> "(Fold Union ?x)"),
@@ -230,14 +154,6 @@ pub fn rules() -> Vec<Rewrite> {
 
             // unpolar
             rw!("unpolar_trans"; "(Map2 Trans (Unpolar ?n ?center ?params) ?cads)"=> "(Map2 Trans (Repeat ?n ?center) (Map2 TransPolar ?params ?cads))"),
-            // rw("unpolar_trans0",
-            //    "(Map2 Trans (Unpolar ?n (Vec3 0 0 0) ?params) ?cads)",
-            //    "(Map2 TransPolar ?params ?cads)"),
-
-
-            // rw("lift_op",
-            //    "(Binop Union (Affine ?op ?params ?a) (Affine ?op ?params ?b))",
-            //    "(Affine ?op ?params (Binop Union ?a ?b))"),
         ]);
     }
 
@@ -251,14 +167,6 @@ pub fn rules() -> Vec<Rewrite> {
               (Affine Scale (Vec3 ?a ?b ?c) ?m))"),
 
             rw!("trans_scale"; "(Affine Trans (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?b ?c) ?m))"=> "(Affine Scale (Vec3 ?a ?b ?c) (Affine Trans (Vec3 (/ ?x ?a) (/ ?y ?b) (/ ?z ?c)) ?m))"),
-
-            // rw("scale_rotate",
-            //    "(Affine Scale (Vec3 ?a ?a ?a) (Affine Rotate (Vec3 ?x ?y ?z) ?m))",
-            //    "(Affine Rotate (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?a ?a) ?m))"),
-
-            // rw("rotate_scale",
-            //    "(Affine Scale (Vec3 ?a ?a ?a) (Affine Rotate (Vec3 ?x ?y ?z) ?m))",
-            //    "(Affine Rotate (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?a ?a) ?m))"),
 
             // primitives
 
@@ -310,9 +218,7 @@ pub fn rules() -> Vec<Rewrite> {
             ),
 
             // affine rules
-
             rw!("id"; "(Affine Trans (Vec3 0 0 0) ?a)"=> "?a"),
-
             rw!("combine_scale"; "(Affine Scale (Vec3 ?a ?b ?c) (Affine Scale (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Scale (Vec3 (* ?a ?d) (* ?b ?e) (* ?c ?f)) ?cad)"),
             rw!("combine_trans"; "(Affine Trans (Vec3 ?a ?b ?c) (Affine Trans (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Trans (Vec3 (+ ?a ?d) (+ ?b ?e) (+ ?c ?f)) ?cad)"),
 
@@ -460,7 +366,6 @@ where
     if parts.len() <= 1 || parts.len() > PARTITIONING_MAX {
         return None;
     }
-    // println!("parts: {:?}", parts);
 
     let mut order = Vec::new();
     let mut list_ids = vec![];
@@ -484,19 +389,10 @@ where
         egraph.add(e)
     };
 
-    // if !res.was_there {
-    //     debug!("Partition: {:?}", parts);
-    // }
-
     return Some(res);
 }
 
 fn get_single_cad(egraph: &EGraph, id: Id) -> Cad {
-    // let nodes = &egraph[id].nodes;
-    // assert!(nodes.iter().all(|n| n == &nodes[0]));
-    // let n = &nodes[0];
-    // assert_eq!(n.children.len(), 0);
-    // n.op.clone()
     let best = &egraph[id].data.best;
     assert!(best.is_leaf());
     best.clone()
@@ -634,8 +530,6 @@ impl Applier<Cad, MetaAnalysis> for ListApplier {
         _rule_name: Symbol,
     ) -> Vec<Id> {
         let ids: Vec<Id> = get_meta_list!(egraph, map[self.var]).clone();
-        // println!("LISTAPPLIER: {:?}", ids);
-        // println!("ids: {:?}", ids);
         let bests: Vec<_> = ids.iter().map(|&id| egraph[id].data.best.clone()).collect();
         let ops: Option<Vec<_>> = ids
             .iter()
@@ -686,20 +580,8 @@ impl Applier<Cad, MetaAnalysis> for ListApplier {
             let len = vec_list.len();
             if len > 2 {
                 let solved = crate::solve::solve(egraph, &vec_list);
-                // if !solved.is_empty() {
-                //     for id in &solved {
-                //         println_cad(egraph, *id);
-                //     }
-                // }
                 results.extend(solved);
             }
-            // results.extend(partition_list(egraph, &ids, |i, _| {
-            //     let s0 = num_sign(vec_list[i].0);
-            //     let s1 = num_sign(vec_list[i].1);
-            //     let s2 = num_sign(vec_list[i].2);
-            //     (s0, s1, s2)
-            // }));
-            // try to partition things by coordinate
             results.extend(partition_list(egraph, &ids, |i, _| vec_list[i].0));
             results.extend(partition_list(egraph, &ids, |i, _| vec_list[i].1));
             results.extend(partition_list(egraph, &ids, |i, _| vec_list[i].2));
@@ -733,13 +615,8 @@ macro_rules! get_unit {
     ($egraph:expr, $eclass:expr, $cad:path) => {{
         let egraph = &$egraph;
         let eclass = $eclass;
-        // let nodes = &egraph[eclass_list[0]].nodes;
-        // if nodes.len() > 1 {
-        //     assert!(nodes[1..].iter().all(|n| n == &nodes[0]))
-        // }
         match &egraph[eclass].data.best {
             $cad(p) => {
-                // assert_eq!(nodes[0].children.len(), 0);
                 p
             }
             _ => panic!("expected {}", stringify!($cad)),

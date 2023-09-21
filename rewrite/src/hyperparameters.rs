@@ -1,3 +1,7 @@
+// cad.rs
+pub const COST_BIG_VALUE: f64 = 100_000_000.0;
+pub const COST_SMALL_VALUE: f64 = 0.001;
+
 // num.rs
 pub const ABS_EPSILON: f64 = 0.0001;
 pub const REL_EPSILON: f64 = 0.0001;

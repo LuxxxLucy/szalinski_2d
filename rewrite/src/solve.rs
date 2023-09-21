@@ -124,11 +124,11 @@ fn solve_deg2(vs: &[Num]) -> Option<Deg2> {
 }
 
 fn solve_list_fn(xs: &[Num]) -> Option<Formula> {
-    if let Some(sol1) = solve_deg1(&xs) {
+    if let Some(sol1) = solve_deg1(xs) {
         return Some(Formula::Deg1(sol1));
     }
     if xs.len() > 3 {
-        return solve_deg2(&xs).map(Formula::Deg2);
+        return solve_deg2(xs).map(Formula::Deg2);
     }
     None
 }
@@ -155,7 +155,7 @@ fn solve_and_add(egraph: &mut EGraph, xs: &[Num], ys: &[Num], zs: &[Num]) -> Opt
         Cad::ListVar(LV("j")),
         Cad::ListVar(LV("k")),
     ];
-    let mut inserted = vec![None; 3];
+    let mut inserted = [None; 3];
 
     for (((&chunk_len, lists), inner), var) in by_chunk.iter().zip(&inners).zip(vars) {
         for (index, list) in lists {
@@ -290,7 +290,7 @@ fn add_vec(egraph: &mut EGraph, v: Vec3) -> Id {
 pub fn solve(egraph: &mut EGraph, list: &[Vec3]) -> Vec<Id> {
     let mut results = solve_vec(egraph, list);
     debug!("Solved {:?} -> {:?}", list, results);
-    let (center, polar_list) = polarize(&list);
+    let (center, polar_list) = polarize(list);
     for res in solve_vec(egraph, &polar_list) {
         let e = Cad::Unpolar([
             add_num(egraph, list.len().into()),
@@ -308,14 +308,13 @@ fn chunk_length(list: &[Num]) -> usize {
     }
 
     for n in 2..list.len() {
-        if list.len() % n == 0 {
-            if list
+        if list.len() % n == 0
+            && list
                 .chunks_exact(n)
                 .skip(1)
                 .all(|chunk| &list[..n] == chunk)
-            {
-                return n;
-            }
+        {
+            return n;
         }
     }
 

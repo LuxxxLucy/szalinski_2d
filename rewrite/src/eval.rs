@@ -1,5 +1,5 @@
-use std::fmt;
 use std::collections::HashMap;
+use std::fmt;
 
 use egg::{Id, Language, RecExpr};
 
@@ -72,29 +72,23 @@ pub fn remove_empty(expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Optio
             let a = args[1];
             let b = args[2];
             match bop {
-                Union => {
-                    if a.is_none() || b.is_none() {
-                        a.or(b)
-                    } else {
-                        Some(out.add(Binop([bop_id, a.unwrap(), b.unwrap()])))
-                    }
-                }
-                Inter => {
-                    if a.is_none() || b.is_none() {
-                        None
-                    } else {
-                        Some(out.add(Binop([bop_id, a.unwrap(), b.unwrap()])))
-                    }
-                }
-                Diff => {
-                    if a.is_none() {
-                        b
-                    } else if b.is_none() {
-                        a
-                    } else {
-                        Some(out.add(Binop([bop_id, a.unwrap(), b.unwrap()])))
-                    }
-                }
+                Union => match (a, b) {
+                    (Some(op1), Some(op2)) => Some(out.add(Binop([bop_id, op1, op2]))),
+                    _ => a.or(b),
+                },
+                Inter => match (a, b) {
+                    (Some(op1), Some(op2)) => Some(out.add(Binop([bop_id, op1, op2]))),
+                    _ => None,
+                },
+                Diff => match (a, b) {
+                    (Some(op1), Some(op2)) => Some(out.add(Binop([bop_id, op1, op2]))),
+                    (Some(op1), None) => Some(op1),
+                    (None, Some(op2)) => Some(op2),
+                    _ => panic!(
+                        "should have at least op available: bop {:?} with op1 {:?} and op2 {:?}",
+                        bop, a, b
+                    ),
+                },
                 _ => panic!("unexpected binop: {:?}", bop),
             }
         }
@@ -105,7 +99,7 @@ pub fn remove_empty(expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Optio
             let listargs = list.children().iter().map(|e| remove_empty(expr, *e, out));
             match bop {
                 Union => {
-                    let non_empty: Vec<Id> = listargs.filter_map(|e| e).collect();
+                    let non_empty: Vec<Id> = listargs.flatten().collect();
                     if non_empty.is_empty() {
                         None
                     } else {
@@ -127,7 +121,7 @@ pub fn remove_empty(expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Optio
                     // if first is empty, then we are empty
                     let first = listargs.next().unwrap()?;
 
-                    let non_empty: Vec<Id> = listargs.filter_map(|e| e).collect();
+                    let non_empty: Vec<Id> = listargs.flatten().collect();
                     if non_empty.is_empty() {
                         Some(first)
                     } else {
@@ -135,7 +129,7 @@ pub fn remove_empty(expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Optio
                         args.extend(non_empty);
                         let listexpr = List(args);
                         let diff = out.add(Diff);
-                        let listexpr = out.add(listexpr.into());
+                        let listexpr = out.add(listexpr);
                         Some(out.add(Fold([diff, listexpr])))
                     }
                 }
@@ -205,7 +199,7 @@ fn mk_list(exprs: Vec<Id>) -> Cad {
 
 fn get_list(expr: &RecExpr<Cad>, list: Id) -> &Vec<Id> {
     match &expr[list] {
-        Cad::List(list) => &list,
+        Cad::List(list) => list,
         cad => panic!("expected list, got {:?}", cad),
     }
 }
@@ -333,7 +327,7 @@ pub fn eval(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<C
             let args = args.map(|arg| eval(cx, expr, arg, out));
             let n = get_num(out, args[0]);
             let t = args[1];
-            out.add(mk_list(vec![t.clone(); n as usize]))
+            out.add(mk_list(vec![t; n as usize]))
         }
         Cad::Concat(args) => {
             let mut vec = Vec::new();
@@ -415,7 +409,7 @@ impl<'a> fmt::Display for Scad<'a> {
         let mut fmt_impl = |p: Id, out: &RecExpr<Cad>| -> fmt::Result {
             let expr = &out[p];
             let arg = |i: usize| expr.children()[i];
-            let child = |i: usize| Scad(&out, expr.children()[i]);
+            let child = |i: usize| Scad(out, expr.children()[i]);
             match expr {
                 Cad::Num(float) => write!(f, "{}", float),
                 Cad::Bool(b) => write!(f, "{}", b),

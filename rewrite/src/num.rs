@@ -5,8 +5,8 @@ use egg::Language;
 use log::*;
 
 use crate::{
-    hyperparameters::{ABS_EPSILON, REL_EPSILON},
     cad::{Cad, EGraph},
+    hyperparameters::{ABS_EPSILON, REL_EPSILON},
 };
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Default, Clone, Copy)]

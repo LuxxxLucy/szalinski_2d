@@ -320,7 +320,7 @@ pub fn rules() -> Vec<Rewrite> {
 
 fn get_float(expr: &Cad) -> Option<Num> {
     match expr {
-        Cad::Num(f) => Some(f.clone()),
+        Cad::Num(f) => Some(*f),
         _ => None,
     }
 }
@@ -389,7 +389,7 @@ where
         egraph.add(e)
     };
 
-    return Some(res);
+    Some(res)
 }
 
 fn get_single_cad(egraph: &EGraph, id: Id) -> Cad {
@@ -616,9 +616,7 @@ macro_rules! get_unit {
         let egraph = &$egraph;
         let eclass = $eclass;
         match &egraph[eclass].data.best {
-            $cad(p) => {
-                p
-            }
+            $cad(p) => p,
             _ => panic!("expected {}", stringify!($cad)),
         }
     }};
@@ -826,7 +824,7 @@ impl Applier<Cad, MetaAnalysis> for Flatten {
     ) -> Vec<Id> {
         fn get_nested_fold<'a>(egraph: &'a EGraph, op: &'a Cad, id: Id) -> Option<&'a [Id]> {
             let is_op = |i| egraph[i].nodes.iter().any(|c| c == op);
-            let get_list = |i| egraph[i].data.list.as_ref().map(Vec::as_slice);
+            let get_list = |i| egraph[i].data.list.as_deref();
             egraph[id]
                 .nodes
                 .iter()

@@ -6,8 +6,8 @@ use log::debug;
 use egg::*;
 
 use crate::{
-    num::{num, Num},
     hyperparameters::{COST_BIG_VALUE, COST_SMALL_VALUE},
+    num::{num, Num},
     permute::{Partitioning, Permutation},
 };
 
@@ -179,7 +179,7 @@ impl Analysis<Cad> for MetaAnalysis {
         did_merge
     }
     fn make(egraph: &EGraph, enode: &Cad) -> Self::Data {
-        let best = eval(&egraph, enode).unwrap_or_else(|| enode.clone());
+        let best = eval(egraph, enode).unwrap_or_else(|| enode.clone());
 
         let cost = CostFn.cost(enode, |id| egraph[id].data.cost);
 
@@ -281,11 +281,11 @@ pub fn println_cad(egraph: &EGraph, id: Id) {
     pub fn println_cad_impl(egraph: &EGraph, id: Id) {
         let best = &egraph[id].data.best;
         if best.is_leaf() {
-            print!("{}", best.to_string());
+            print!("{}", best);
             return;
         }
         print!("(");
-        print!("{}", best.to_string());
+        print!("{}", best);
         best.for_each(|i| {
             print!(" ");
             println_cad_impl(egraph, i);

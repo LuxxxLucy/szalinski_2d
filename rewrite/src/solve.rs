@@ -117,9 +117,7 @@ fn solve_deg2(vs: &[Num]) -> Option<Deg2> {
     let works = ivs.all(|(i, &v)| v.is_close(a * f(i * i) + b * f(i) + c));
 
     if works {
-        // dbg!(
         Some(Deg2 { a, b, c })
-    // )
     } else {
         None
     }
@@ -136,7 +134,6 @@ fn solve_list_fn(xs: &[Num]) -> Option<Formula> {
 }
 
 fn solve_and_add(egraph: &mut EGraph, xs: &[Num], ys: &[Num], zs: &[Num]) -> Option<Id> {
-    // println!("Solving:\n  x={:?}\n  y={:?}\n  z={:?}", xs, ys, zs);
     assert_eq!(xs.len(), ys.len());
     assert_eq!(xs.len(), zs.len());
     let mut by_chunk = IndexMap::<usize, Vec<_>>::default();
@@ -165,7 +162,6 @@ fn solve_and_add(egraph: &mut EGraph, xs: &[Num], ys: &[Num], zs: &[Num]) -> Opt
             let slice = &list[..chunk_len];
             let nums = unrun(slice, *inner)?;
             let fun = solve_list_fn(&nums)?;
-            // println!("Found: {:?}", fun);
             let var_id = egraph.add(var.clone());
             inserted[*index] = Some(fun.add_to_egraph(egraph, var_id));
         }
@@ -189,7 +185,6 @@ fn solve_and_add(egraph: &mut EGraph, xs: &[Num], ys: &[Num], zs: &[Num]) -> Opt
     let vec = egraph.add(Cad::Vec3([x, y, z]));
     children.push(vec);
     let map = egraph.add(Cad::MapI(children));
-    // println!("inserted map: {:?}", map);
     Some(map)
 }
 
@@ -254,15 +249,12 @@ fn polar_one(center: (f64, f64, f64), v: Vec3) -> Vec3 {
     let (a, b, c) = center;
     let (xa, yb, zc) = (x - a, y - b, z - c);
     let r = (xa * xa + yb * yb + zc * zc).sqrt();
-    // println!("r: {}", r);
     let theta = yb.atan2(xa) * 180.0 / consts::PI;
     let phi = if r == 0.0 {
         0.0
     } else {
         (zc / r).acos() * 180.0 / consts::PI
     };
-    // println!("xa: {} yb: {} zc: {}", xa, yb, zc);
-    // println!("r: {} t: {} p: {}", r, theta, phi);
     (r.into(), theta.into(), phi.into())
 }
 

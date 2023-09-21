@@ -1,23 +1,12 @@
-use std::collections::HashMap;
 use std::fmt;
+use std::collections::HashMap;
 
-use egg::Id;
-use egg::Language;
-use egg::RecExpr;
+use egg::{Id, Language, RecExpr};
 
 use crate::cad::Cad;
 
-// macro_rules! rec {
-//     ($op:expr) => {RecExpr::from($op)};
-//     ($op:expr, $($arg:expr),*) => {
-//         RecExpr::from($op(vec![$($arg),*]))
-//     };
-// }
-
 pub fn remove_empty(expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Option<Id> {
     let e = expr[p].clone();
-    // let child = |i: usize| &expr[e.children()[i]];
-    // let recurse = |i: usize| remove_empty(expr, e.children()[i], out);
     use Cad::*;
     let res = match e {
         Empty => None,
@@ -157,13 +146,10 @@ pub fn remove_empty(expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Optio
             let e =
                 e.map_children(|id| remove_empty(expr, id, out).unwrap_or_else(|| out.add(Empty)));
             Some(out.add(e))
-            // todo!()
-
-            // panic!("unexpected cad: {} {}", e, expr.pretty(80))
         }
     };
     if res.is_none() {
-        // println!("Found empty: {}", expr.pretty(80));
+        println!("Found empty: {}", expr.pretty(80));
     }
     res
 }
@@ -372,10 +358,6 @@ pub fn eval(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<C
             out.add(list)
         }
         Cad::MapI(args) => {
-            // let args: Vec<_> = args[..args.len() - 1]
-            //     .iter()
-            //     .map(|arg| eval(cx, expr, *arg, out))
-            //     .collect();
             let body = *args.last().unwrap();
             let bounds: Vec<usize> = args[..args.len() - 1]
                 .iter()
@@ -463,7 +445,6 @@ impl<'a> fmt::Display for Scad<'a> {
                     get_vec3_nums(out, arg(1)).2,
                     child(2),
                 ),
-                // Cad::Hexagon => writeln!(f, "cylinder();"),
                 Cad::Hull(_) => {
                     write!(f, "hull() {{")?;
                     for cad in out[arg(0)].children() {

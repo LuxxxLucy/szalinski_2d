@@ -1,6 +1,6 @@
 #[warn(non_snake_case)] // TODO: remove it
 use std::ffi::OsStr;
-use std::io::{self, Write};
+use std::io::Write;
 
 // For Arg
 extern crate clap;
@@ -121,10 +121,10 @@ impl IterationData<Cad, MetaAnalysis> for MyIterData {
 type MyRunner = egg::Runner<Cad, MetaAnalysis, MyIterData>;
 
 pub fn optimize(input: &str) -> (String, RunResult) {
-    let ITERATIONS = 50000;
-    let NODE_LIMIT = 3000000;
-    let TIMEOUT = 10;
-    let PRE_EXTRACT = true;
+    const ITERATIONS: usize = 50000;
+    const NODE_LIMIT: usize = 3000000;
+    const TIMEOUT: usize = 10;
+    const PRE_EXTRACT: bool = true;
 
     println!("input is {}", input);
     let initial_expr: RecExpr<_> = input.parse().expect("Couldn't parse input");
@@ -199,7 +199,6 @@ pub fn optimize(input: &str) -> (String, RunResult) {
 }
 // ============================================
 
-const RAW_DIR: &str = "raw";
 const PROGRAM_DIR: &str = "program";
 const REF_DIR: &str = "ref";
 const REPORT_DIR: &str = "report";
@@ -236,7 +235,6 @@ impl TestWorld {
 pub struct TestCase {
     name: String,
     program_path: PathBuf,
-    raw_path: PathBuf,
     ref_path: PathBuf,
     report_path: PathBuf,
 }
@@ -262,9 +260,6 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
     let mut ok = true;
     let mut updated = false;
 
-    println!("update is {}", args.update);
-
-    // todo: change the program_dir into a dir_path in test case.
     let name = &test_case.name;
     let program_path = &test_case.program_path;
     let ref_program_path = &test_case.ref_path;
@@ -299,6 +294,9 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
     let out_file = std::fs::File::create(report_path).expect("failed to open output");
     serde_json::to_writer_pretty(out_file, &report).unwrap();
 
+    if updated {
+        writeln!(stdout, "program update  ✔").unwrap();
+    }
     if ok {
         writeln!(stdout, " ✔").unwrap();
     } else {
@@ -310,7 +308,7 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
 fn main() {
     let args = Args::parse();
 
-    let mut world = TestWorld::new();
+    let world = TestWorld::new();
 
     println!("Running tests...");
     let results = WalkDir::new("program")
@@ -337,14 +335,12 @@ fn main() {
 
             println!("the name is {}", path.display());
             let program_path = Path::new(PROGRAM_DIR).join(path);
-            let raw_path = Path::new(RAW_DIR).join(path);
             let ref_path = Path::new(REF_DIR).join(path);
             let report_path = Path::new(REPORT_DIR).join(path);
 
             let test_case = TestCase {
                 name: path.display().to_string(),
                 program_path,
-                raw_path,
                 ref_path,
                 report_path,
             };

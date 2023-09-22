@@ -120,7 +120,7 @@ impl IterationData<Cad, MetaAnalysis> for MyIterData {
 
 type MyRunner = egg::Runner<Cad, MetaAnalysis, MyIterData>;
 
-pub fn optimize(input: &str) -> String {
+pub fn optimize(input: &str) -> (String, RunResult) {
     let ITERATIONS = 50000;
     let NODE_LIMIT = 3000000;
     let TIMEOUT = 10;
@@ -195,11 +195,7 @@ pub fn optimize(input: &str) -> String {
         depth_under_mapis: depth_under_mapis(&best.1),
     };
 
-    // TODO: output report
-    // let out_file = std::fs::File::create(&args[2]).expect("failed to open output");
-    // serde_json::to_writer_pretty(out_file, &report).unwrap();
-    // String::from("run result okay")
-    best.1.pretty(80)
+    (best.1.pretty(80), report)
 }
 // ============================================
 
@@ -272,11 +268,12 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
     let name = &test_case.name;
     let program_path = &test_case.program_path;
     let ref_program_path = &test_case.ref_path;
+    let report_path = &test_case.report_path;
 
     stdout.write_all(name.as_bytes()).unwrap();
 
     let src_program = std::fs::read_to_string(program_path).expect("Unable to read file");
-    let res_program = optimize(&src_program);
+    let (res_program, report) = optimize(&src_program);
     if let Ok(ref_program) = std::fs::read_to_string(ref_program_path) {
         if !compare(&res_program, &ref_program) {
             if args.update {
@@ -296,6 +293,11 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
             ok = false;
         }
     }
+
+    let report_path_prefix = report_path.parent().unwrap();
+    std::fs::create_dir_all(report_path_prefix).expect("directory create fail");
+    let out_file = std::fs::File::create(report_path).expect("failed to open output");
+    serde_json::to_writer_pretty(out_file, &report).unwrap();
 
     if ok {
         writeln!(stdout, " ✔").unwrap();

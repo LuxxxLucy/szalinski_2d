@@ -29,11 +29,15 @@ macro_rules! sz_param {
     }
 }
 
-pub mod cad;
+// Repo-wise hyperparameters
 pub mod hyperparameters;
+
+// Base data and utilities
+pub mod base;
+
+pub mod cad;
 pub mod rules;
 
 pub mod eval;
-pub mod num;
 mod permute;
 mod solve;

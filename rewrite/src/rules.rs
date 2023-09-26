@@ -7,12 +7,12 @@ use log::{info, warn};
 use egg::{rewrite as rw, *};
 
 use crate::{
+    base::num::{num, Num},
     cad::{Cad, EGraph, MetaAnalysis, Rewrite, Vec3},
     hyperparameters::{
         AFFINE_SIGNATURE_MAX_LEN, CAD_IDENTS, INV_TRANS, PARTITIONING, PARTITIONING_MAX,
         STRUCTURE_MATCH_LIMIT,
     },
-    num::{num, Num},
     permute::{Partitioning, Permutation},
 };
 

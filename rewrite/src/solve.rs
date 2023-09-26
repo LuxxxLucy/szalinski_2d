@@ -5,9 +5,9 @@ use log::*;
 use indexmap::{indexset, IndexMap};
 
 use crate::{
+    base::num::Num,
     cad::{Cad, EGraph, ListVar as LV, Vec3},
     hyperparameters::SOLVE_ROUND,
-    num::Num,
     permute::Permutation,
 };
 

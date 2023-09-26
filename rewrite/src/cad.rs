@@ -6,8 +6,8 @@ use log::debug;
 use egg::*;
 
 use crate::{
+    base::num::{num, Num},
     hyperparameters::{COST_BIG_VALUE, COST_SMALL_VALUE},
-    num::{num, Num},
     permute::{Partitioning, Permutation},
 };
 

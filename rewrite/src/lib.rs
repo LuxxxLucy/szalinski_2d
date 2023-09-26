@@ -35,7 +35,15 @@ pub mod hyperparameters;
 // Base data and utilities
 pub mod base;
 
+// CAD language
 pub mod cad;
+
+// (internal) base structs for used in CAD
+mod cad_struct;
+
+// Prune CAD egraph
+pub mod prune;
+
 pub mod rules;
 
 pub mod eval;

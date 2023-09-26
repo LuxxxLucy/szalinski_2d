@@ -20,13 +20,6 @@ fn mk_list(exprs: Vec<Id>) -> Cad {
     Cad::List(exprs)
 }
 
-fn get_list(expr: &RecExpr<Cad>, list: Id) -> &Vec<Id> {
-    match &expr[list] {
-        Cad::List(list) => list,
-        cad => panic!("expected list, got {:?}", cad),
-    }
-}
-
 fn eval_list(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Vec<Id> {
     let list = eval(cx, expr, p, out);
     match &out[list] {
@@ -155,8 +148,12 @@ pub fn eval(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<C
         Cad::Concat(args) => {
             let mut vec = Vec::new();
             for list in eval_list(cx, expr, args[0], out) {
-                for c in get_list(out, list) {
-                    vec.push(*c)
+                if let Cad::List(cs) = &out[list] {
+                    for c in cs {
+                        vec.push(*c)
+                    }
+                } else {
+                    panic!("expected list, got {:?}", out[list]);
                 }
             }
             out.add(mk_list(vec))

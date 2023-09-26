@@ -27,8 +27,10 @@ use log::*;
 use serde::Serialize;
 
 use egg::*;
-use rewrite::cad::{Cad, Cost, CostFn, MetaAnalysis};
-use rewrite::eval::{remove_empty, Scad};
+use rewrite::cad::{Cad, MetaAnalysis};
+use rewrite::cost::{Cost, CostFn};
+use rewrite::export::scad::Scad;
+use rewrite::prune::remove_empty;
 use std::default::Default;
 
 #[derive(Serialize)]
@@ -123,7 +125,7 @@ type MyRunner = egg::Runner<Cad, MetaAnalysis, MyIterData>;
 pub fn optimize(input: &str) -> (String, RunResult) {
     const ITERATIONS: usize = 50000;
     const NODE_LIMIT: usize = 3000000;
-    const TIMEOUT: usize = 10;
+    const TIMEOUT: usize = 1;
     const PRE_EXTRACT: bool = true;
 
     println!("input is {}", input);

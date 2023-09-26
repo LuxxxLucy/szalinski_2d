@@ -41,6 +41,9 @@ pub mod cad;
 // (internal) base structs for used in CAD
 mod cad_struct;
 
+// CAD cost
+pub mod cost;
+
 // Prune CAD egraph
 pub mod prune;
 

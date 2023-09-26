@@ -1,2 +1,6 @@
 /// Base; Data Structure, Useful Routines
-pub mod num; // floating point number
+// floating point number
+pub mod num;
+
+// geometry
+pub mod geom;

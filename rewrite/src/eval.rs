@@ -3,26 +3,9 @@ use std::fmt;
 
 use egg::{Id, Language, RecExpr};
 
+use crate::base::geom::to_cartesian;
 use crate::cad::Cad;
 use crate::cad_struct::{get_num, get_vec3_nums};
-
-// from (r, theta, phi) to (x, y, z)
-// x=rsinϕcosθ
-// y=rsinϕsinθ
-// z=rcosϕ
-// https://keisan.casio.com/exec/system/1359534351
-fn to_cartesian(v: (f64, f64, f64)) -> (f64, f64, f64) {
-    fn to_rad(deg: f64) -> f64 {
-        deg * std::f64::consts::PI / 180.0
-    }
-    let r = v.0;
-    let th = to_rad(v.1);
-    let ph = to_rad(v.2);
-    let x = r * ph.sin() * th.cos();
-    let y = r * ph.sin() * th.sin();
-    let z = r * ph.cos();
-    (x, y, z)
-}
 
 type FunCtx = HashMap<&'static str, usize>;
 

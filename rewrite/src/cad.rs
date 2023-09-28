@@ -6,9 +6,9 @@ use log::debug;
 use egg::*;
 
 use crate::{
+    base::list_op::{Partitioning, Permutation},
     base::num::{num, Num},
     cost::{Cost, CostFn},
-    permute::{Partitioning, Permutation},
 };
 
 pub type EGraph = egg::EGraph<Cad, MetaAnalysis>;

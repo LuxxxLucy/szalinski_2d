@@ -50,7 +50,6 @@ pub mod prune;
 pub mod rules;
 
 pub mod eval;
-mod permute;
 mod solve;
 
 // Export

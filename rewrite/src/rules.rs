@@ -7,13 +7,13 @@ use log::{info, warn};
 use egg::{rewrite as rw, *};
 
 use crate::{
+    base::list_op::{Partitioning, Permutation},
     base::num::{num, Num},
     cad::{Cad, EGraph, MetaAnalysis, Rewrite, Vec3},
     hyperparameters::{
         AFFINE_SIGNATURE_MAX_LEN, CAD_IDENTS, INV_TRANS, PARTITIONING, PARTITIONING_MAX,
         STRUCTURE_MATCH_LIMIT,
     },
-    permute::{Partitioning, Permutation},
 };
 
 fn is_not_zero(var: &'static str) -> impl Fn(&mut EGraph, Id, &Subst) -> bool {
@@ -380,7 +380,7 @@ where
     let list_of_lists = egraph.add(Cad::List(list_ids));
     let concat = egraph.add(Cad::Unpart([part_id, list_of_lists]));
 
-    let perm = Permutation::from_vec(order);
+    let perm = Permutation::from_vec(&order);
     let res = if perm.is_ordered() {
         concat
     } else {
@@ -731,7 +731,7 @@ impl Applier<Cad, MetaAnalysis> for UnpartApplier {
         assert_eq!(len_so_far, part.total_len());
         assert_eq!(len_so_far, big_perm.len());
 
-        let perm = Permutation::from_vec(big_perm);
+        let perm = Permutation::from_vec(&big_perm);
         let is_ordered = perm.is_ordered();
         let perm = egraph.add(Cad::Permutation(perm));
         let part = egraph.add(Cad::Partitioning(part));
@@ -782,7 +782,7 @@ impl Applier<Cad, MetaAnalysis> for SortUnpartApplier {
             {
                 return vec![];
             }
-            sorts.push(slice.iter().map(|i| i - len_so_far).collect());
+            sorts.push(slice.iter().map(|i| i - len_so_far).collect::<Vec<_>>());
             len_so_far += len;
         }
 
@@ -790,7 +790,7 @@ impl Applier<Cad, MetaAnalysis> for SortUnpartApplier {
             .into_iter()
             .zip(items)
             .map(|(p, list_id)| {
-                let perm = Permutation::from_vec(p);
+                let perm = Permutation::from_vec(&p);
                 let sort_id = egraph.add(Cad::Permutation(perm));
                 egraph.add(Cad::Sort([sort_id, list_id]))
             })

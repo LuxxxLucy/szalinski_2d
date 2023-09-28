@@ -5,10 +5,10 @@ use log::*;
 use indexmap::{indexset, IndexMap};
 
 use crate::{
+    base::list_op::Permutation,
     base::num::Num,
     cad::{Cad, EGraph, ListVar as LV, Vec3},
     hyperparameters::SOLVE_ROUND,
-    permute::Permutation,
 };
 
 use egg::Id;

@@ -1,3 +1,9 @@
+///
+/// list_op.rs:
+/// contains permutation and partition as two kinds of structure edit on a list.
+/// Permute means to change the ordering of the elements in a list
+/// Partitioning means to decompose a list into a list of lists.
+///
 use std::fmt;
 use std::str::FromStr;
 
@@ -32,8 +38,10 @@ impl Permutation {
         Permutation::sort(&self.order)
     }
 
-    pub fn from_vec(order: Vec<usize>) -> Permutation {
-        Permutation { order }
+    pub fn from_vec(ordering: &[usize]) -> Permutation {
+        Permutation {
+            order: ordering.to_vec(),
+        }
     }
 
     pub fn sort<T: Ord>(list: &[T]) -> Permutation {

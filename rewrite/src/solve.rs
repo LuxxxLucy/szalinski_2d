@@ -5,9 +5,10 @@ use log::*;
 use indexmap::{indexset, IndexMap};
 
 use crate::{
+    base::list_op::Permutation,
+    base::num::Num,
     cad::{Cad, EGraph, ListVar as LV, Vec3},
-    num::Num,
-    permute::Permutation,
+    hyperparameters::SOLVE_ROUND,
 };
 
 use egg::Id;
@@ -73,8 +74,6 @@ struct Deg2 {
     c: f64,
 }
 
-sz_param!(SOLVE_ROUND: f64 = 0.01);
-
 fn solve_deg1(vs: &[Num]) -> Option<Deg1> {
     let i1 = 0.0;
     let i2 = 1.0;
@@ -83,7 +82,7 @@ fn solve_deg1(vs: &[Num]) -> Option<Deg1> {
     let b = (o1 * i2) - (o2 * i1) / (i2 - i1);
     let a = (o2 - b) / i2;
 
-    let rnd = *SOLVE_ROUND;
+    let rnd = SOLVE_ROUND;
     let aa = (a / rnd).round() * rnd;
     let bb = (b / rnd).round() * rnd;
 
@@ -118,26 +117,23 @@ fn solve_deg2(vs: &[Num]) -> Option<Deg2> {
     let works = ivs.all(|(i, &v)| v.is_close(a * f(i * i) + b * f(i) + c));
 
     if works {
-        // dbg!(
         Some(Deg2 { a, b, c })
-    // )
     } else {
         None
     }
 }
 
 fn solve_list_fn(xs: &[Num]) -> Option<Formula> {
-    if let Some(sol1) = solve_deg1(&xs) {
+    if let Some(sol1) = solve_deg1(xs) {
         return Some(Formula::Deg1(sol1));
     }
     if xs.len() > 3 {
-        return solve_deg2(&xs).map(Formula::Deg2);
+        return solve_deg2(xs).map(Formula::Deg2);
     }
     None
 }
 
 fn solve_and_add(egraph: &mut EGraph, xs: &[Num], ys: &[Num], zs: &[Num]) -> Option<Id> {
-    // println!("Solving:\n  x={:?}\n  y={:?}\n  z={:?}", xs, ys, zs);
     assert_eq!(xs.len(), ys.len());
     assert_eq!(xs.len(), zs.len());
     let mut by_chunk = IndexMap::<usize, Vec<_>>::default();
@@ -159,14 +155,13 @@ fn solve_and_add(egraph: &mut EGraph, xs: &[Num], ys: &[Num], zs: &[Num]) -> Opt
         Cad::ListVar(LV("j")),
         Cad::ListVar(LV("k")),
     ];
-    let mut inserted = vec![None; 3];
+    let mut inserted = [None; 3];
 
     for (((&chunk_len, lists), inner), var) in by_chunk.iter().zip(&inners).zip(vars) {
         for (index, list) in lists {
             let slice = &list[..chunk_len];
             let nums = unrun(slice, *inner)?;
             let fun = solve_list_fn(&nums)?;
-            // println!("Found: {:?}", fun);
             let var_id = egraph.add(var.clone());
             inserted[*index] = Some(fun.add_to_egraph(egraph, var_id));
         }
@@ -190,7 +185,6 @@ fn solve_and_add(egraph: &mut EGraph, xs: &[Num], ys: &[Num], zs: &[Num]) -> Opt
     let vec = egraph.add(Cad::Vec3([x, y, z]));
     children.push(vec);
     let map = egraph.add(Cad::MapI(children));
-    // println!("inserted map: {:?}", map);
     Some(map)
 }
 
@@ -255,15 +249,12 @@ fn polar_one(center: (f64, f64, f64), v: Vec3) -> Vec3 {
     let (a, b, c) = center;
     let (xa, yb, zc) = (x - a, y - b, z - c);
     let r = (xa * xa + yb * yb + zc * zc).sqrt();
-    // println!("r: {}", r);
     let theta = yb.atan2(xa) * 180.0 / consts::PI;
     let phi = if r == 0.0 {
         0.0
     } else {
         (zc / r).acos() * 180.0 / consts::PI
     };
-    // println!("xa: {} yb: {} zc: {}", xa, yb, zc);
-    // println!("r: {} t: {} p: {}", r, theta, phi);
     (r.into(), theta.into(), phi.into())
 }
 
@@ -299,7 +290,7 @@ fn add_vec(egraph: &mut EGraph, v: Vec3) -> Id {
 pub fn solve(egraph: &mut EGraph, list: &[Vec3]) -> Vec<Id> {
     let mut results = solve_vec(egraph, list);
     debug!("Solved {:?} -> {:?}", list, results);
-    let (center, polar_list) = polarize(&list);
+    let (center, polar_list) = polarize(list);
     for res in solve_vec(egraph, &polar_list) {
         let e = Cad::Unpolar([
             add_num(egraph, list.len().into()),
@@ -317,14 +308,13 @@ fn chunk_length(list: &[Num]) -> usize {
     }
 
     for n in 2..list.len() {
-        if list.len() % n == 0 {
-            if list
+        if list.len() % n == 0
+            && list
                 .chunks_exact(n)
                 .skip(1)
                 .all(|chunk| &list[..n] == chunk)
-            {
-                return n;
-            }
+        {
+            return n;
         }
     }
 

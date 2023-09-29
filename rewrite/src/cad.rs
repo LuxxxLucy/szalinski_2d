@@ -1,19 +1,19 @@
 use std::fmt;
 use std::str::FromStr;
 
+use log::debug;
+
 use egg::*;
 
 use crate::{
-    num::{num, Num},
-    permute::{Partitioning, Permutation},
+    base::list_op::{Partitioning, Permutation},
+    base::num::{num, Num},
+    cost::{Cost, CostFn},
 };
-
-use log::debug;
 
 pub type EGraph = egg::EGraph<Cad, MetaAnalysis>;
 pub type EClass = egg::EClass<Cad, MetaAnalysis>;
 pub type Rewrite = egg::Rewrite<Cad, MetaAnalysis>;
-pub type Cost = f64;
 
 pub type Vec3 = (Num, Num, Num);
 
@@ -30,6 +30,7 @@ impl FromStr for ListVar {
         }
     }
 }
+
 impl fmt::Display for ListVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -116,7 +117,6 @@ pub struct Meta {
 
 fn eval(egraph: &EGraph, enode: &Cad) -> Option<Cad> {
     use Cad::*;
-    // let a = |i: usize| enode.children()[i].clone();
     match enode {
         Add(args) => {
             assert_eq!(args.len(), 2);
@@ -178,18 +178,7 @@ impl Analysis<Cad> for MetaAnalysis {
         did_merge
     }
     fn make(egraph: &EGraph, enode: &Cad) -> Self::Data {
-        // let const_args: Option<Vec<Cad>> = enode
-        //     .map_children(|&id| {
-        //         let e: &Cad = egraph[id].data.best.as_ref();
-        //         if e.children().is_empty() {
-        //             Some(e.op.clone())
-        //         } else {
-        //             None
-        //         }
-        //     })
-        //     .collect();
-
-        let best = eval(&egraph, enode).unwrap_or_else(|| enode.clone());
+        let best = eval(egraph, enode).unwrap_or_else(|| enode.clone());
 
         let cost = CostFn.cost(enode, |id| egraph[id].data.cost);
 
@@ -203,13 +192,6 @@ impl Analysis<Cad> for MetaAnalysis {
                     .list
                     .as_ref()
                     .map(|tail| head.chain(tail.iter().copied()).collect())
-                // let tail = tail_meta
-                //     .list
-                //     .as_ref()
-                //     .expect("should be a list here")
-                //     .iter()
-                //     .copied();
-                // Some(head.chain(tail).collect())
             }
             Cad::List(list) => Some(list.clone()),
             _ => None,
@@ -239,20 +221,6 @@ impl Analysis<Cad> for MetaAnalysis {
         }
         let eclass = &egraph[id];
 
-        // // here we prune away excess unsorts, as that will cause some stuff to spin out
-        // let mut n_unsorts = 0;
-        // let limit = 1000;
-        // eclass.nodes.retain(|n| match n.op {
-        //     Cad::Unsort => {
-        //         n_unsorts += 1;
-        //         n_unsorts <= limit
-        //     }
-        //     _ => true,
-        // });
-        // if n_unsorts > limit {
-        //     warn!("Went over unsort limit: {} > {}", n_unsorts, limit);
-        // }
-
         let best = &eclass.data.best;
         if best.is_leaf() {
             let best = best.clone();
@@ -262,64 +230,15 @@ impl Analysis<Cad> for MetaAnalysis {
     }
 }
 
-pub struct CostFn;
-impl egg::CostFunction<Cad> for CostFn {
-    type Cost = Cost;
-
-    fn cost<C>(&mut self, enode: &Cad, mut costs: C) -> Self::Cost
-    where
-        C: FnMut(Id) -> Self::Cost,
-    {
-        use Cad::*;
-        const BIG: f64 = 100_000_000.0;
-        const SMALL: f64 = 0.001;
-
-        let cost = match enode {
-            Num(n) => {
-                let s = format!("{}", n);
-                1.0 + (0.000001 * s.len() as Cost)
-            }
-            Bool(_) | ListVar(_) => SMALL,
-            Add(_args) | Sub(_args) | Mul(_args) | Div(_args) => SMALL,
-
-            BlackBox(..) => 1.0,
-            Cube(_) | Empty | Nil | Sphere(_) | Cylinder(_) | Hull(_) => 1.0,
-
-            Trans | TransPolar | Scale | Rotate => 1.0,
-
-            Union | Diff | Inter => 1.0,
-
-            Repeat(_) => 0.99,
-            MapI(_) => 1.0,
-            Fold(_) => 1.0,
-            Map2(_) => 1.0,
-            Affine(_) => 1.0,
-            Binop(_) => 1.0,
-
-            Concat(_) => 1.0,
-            Cons(_) => 1.0,
-            List(_) => 1.0,
-            Vec3(_) => 1.0,
-
-            Unpolar(_) => BIG,
-            Sort(_) | Unsort(_) | Part(_) | Unpart(_) => BIG,
-            Partitioning(_) => BIG,
-            Permutation(_) => BIG,
-        };
-
-        enode.fold(cost, |sum, i| sum + costs(i))
-    }
-}
-
 pub fn println_cad(egraph: &EGraph, id: Id) {
     pub fn println_cad_impl(egraph: &EGraph, id: Id) {
         let best = &egraph[id].data.best;
         if best.is_leaf() {
-            print!("{}", best.to_string());
+            print!("{}", best);
             return;
         }
         print!("(");
-        print!("{}", best.to_string());
+        print!("{}", best);
         best.for_each(|i| {
             print!(" ");
             println_cad_impl(egraph, i);
@@ -329,6 +248,3 @@ pub fn println_cad(egraph: &EGraph, id: Id) {
     println_cad_impl(egraph, id);
     println!();
 }
-
-// impl Language for Cad {
-// }

@@ -1,7 +1,6 @@
 #[warn(non_snake_case)] // TODO: remove it
-
 use std::ffi::OsStr;
-use std::io::{self, Write};
+use std::io::Write;
 
 // For Arg
 extern crate clap;
@@ -9,8 +8,8 @@ use clap::Parser;
 
 // For looping over of the file system.
 extern crate walkdir;
-use walkdir::WalkDir;
 use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
 
 extern crate rayon;
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -18,9 +17,9 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 extern crate rewrite;
 
 // ==============================================================
+extern crate egg;
 extern crate log;
 extern crate serde;
-extern crate egg;
 
 use std::time::{Duration, Instant};
 
@@ -28,9 +27,11 @@ use log::*;
 use serde::Serialize;
 
 use egg::*;
+use rewrite::cad::{Cad, MetaAnalysis};
+use rewrite::cost::{Cost, CostFn};
+use rewrite::export::scad::Scad;
+use rewrite::prune::remove_empty;
 use std::default::Default;
-use rewrite::cad::{Cad, Cost, CostFn, MetaAnalysis};
-use rewrite::eval::{remove_empty, Scad};
 
 #[derive(Serialize)]
 pub struct RunResult {
@@ -121,12 +122,11 @@ impl IterationData<Cad, MetaAnalysis> for MyIterData {
 
 type MyRunner = egg::Runner<Cad, MetaAnalysis, MyIterData>;
 
-pub fn optimize(input: &str) -> String {
-
-    let ITERATIONS = 50000;
-    let NODE_LIMIT=3000000;
-    let TIMEOUT=10;
-    let PRE_EXTRACT=true;
+pub fn optimize(input: &str) -> (String, RunResult) {
+    const ITERATIONS: usize = 50000;
+    const NODE_LIMIT: usize = 3000000;
+    const TIMEOUT: usize = 1;
+    const PRE_EXTRACT: bool = true;
 
     println!("input is {}", input);
     let initial_expr: RecExpr<_> = input.parse().expect("Couldn't parse input");
@@ -197,16 +197,10 @@ pub fn optimize(input: &str) -> String {
         depth_under_mapis: depth_under_mapis(&best.1),
     };
 
-    // TODO: output report
-    // let out_file = std::fs::File::create(&args[2]).expect("failed to open output");
-    // serde_json::to_writer_pretty(out_file, &report).unwrap();
-    // String::from("run result okay")
-    best.1.pretty(80)
+    (best.1.pretty(80), report)
 }
 // ============================================
 
-
-const RAW_DIR: &str = "raw";
 const PROGRAM_DIR: &str = "program";
 const REF_DIR: &str = "ref";
 const REPORT_DIR: &str = "report";
@@ -235,18 +229,14 @@ struct TestWorld {
 
 impl TestWorld {
     fn new() -> Self {
-        Self {
-            id: 0,
-        }
+        Self { id: 0 }
     }
-
 }
 
 #[derive(Debug, Clone)]
 pub struct TestCase {
     name: String,
     program_path: PathBuf,
-    raw_path: PathBuf,
     ref_path: PathBuf,
     report_path: PathBuf,
 }
@@ -272,17 +262,15 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
     let mut ok = true;
     let mut updated = false;
 
-    println!("update is {}", args.update);
-
-    // todo: change the program_dir into a dir_path in test case.
     let name = &test_case.name;
     let program_path = &test_case.program_path;
     let ref_program_path = &test_case.ref_path;
+    let report_path = &test_case.report_path;
 
     stdout.write_all(name.as_bytes()).unwrap();
 
     let src_program = std::fs::read_to_string(program_path).expect("Unable to read file");
-    let res_program = optimize(&src_program);
+    let (res_program, report) = optimize(&src_program);
     if let Ok(ref_program) = std::fs::read_to_string(ref_program_path) {
         if !compare(&res_program, &ref_program) {
             if args.update {
@@ -303,6 +291,14 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
         }
     }
 
+    let report_path_prefix = report_path.parent().unwrap();
+    std::fs::create_dir_all(report_path_prefix).expect("directory create fail");
+    let out_file = std::fs::File::create(report_path).expect("failed to open output");
+    serde_json::to_writer_pretty(out_file, &report).unwrap();
+
+    if updated {
+        writeln!(stdout, "program update  ✔").unwrap();
+    }
     if ok {
         writeln!(stdout, " ✔").unwrap();
     } else {
@@ -314,7 +310,7 @@ fn run(test_case: TestCase, args: &Args, world: &TestWorld) -> bool {
 fn main() {
     let args = Args::parse();
 
-    let mut world = TestWorld::new();
+    let world = TestWorld::new();
 
     println!("Running tests...");
     let results = WalkDir::new("program")
@@ -341,14 +337,12 @@ fn main() {
 
             println!("the name is {}", path.display());
             let program_path = Path::new(PROGRAM_DIR).join(path);
-            let raw_path = Path::new(RAW_DIR).join(path);
             let ref_path = Path::new(REF_DIR).join(path);
             let report_path = Path::new(REPORT_DIR).join(path);
 
             let test_case = TestCase {
                 name: path.display().to_string(),
                 program_path,
-                raw_path,
                 ref_path,
                 report_path,
             };
@@ -361,7 +355,10 @@ fn main() {
     if len >= 1 {
         println!("{ok} / {len} tests passed.");
     } else {
-        println!("{len} tests found matching the given pattern {0:#?}", args.filter);
+        println!(
+            "{len} tests found matching the given pattern {0:#?}",
+            args.filter
+        );
     }
 
     if ok != len {

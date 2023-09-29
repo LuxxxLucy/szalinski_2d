@@ -7,9 +7,13 @@ use log::{info, warn};
 use egg::{rewrite as rw, *};
 
 use crate::{
+    base::list_op::{Partitioning, Permutation},
+    base::num::{num, Num},
     cad::{Cad, EGraph, MetaAnalysis, Rewrite, Vec3},
-    num::{num, Num},
-    permute::{Partitioning, Permutation},
+    hyperparameters::{
+        AFFINE_SIGNATURE_MAX_LEN, CAD_IDENTS, INV_TRANS, PARTITIONING, PARTITIONING_MAX,
+        STRUCTURE_MATCH_LIMIT,
+    },
 };
 
 fn is_not_zero(var: &'static str) -> impl Fn(&mut EGraph, Id, &Subst) -> bool {
@@ -55,54 +59,14 @@ pub fn pre_rules() -> Vec<Rewrite> {
                 Flatten { list, op }
             }
         ),
-
-        // rw!("union_consr"; "(Binop Union (Fold Union ?list) ?a)" => "(Fold Union (Cons ?a ?list))"),
-        // rw!("inter_consr"; "(Binop Inter (Fold Inter ?list) ?a)" => "(Fold Inter (Cons ?a ?list))"),
-
-        // TODO can't parse this now
-        // rw!("consl"; "(Binop ?bop (Fold ?bop (List ?items...)) ?a)" => "(Fold ?bop (List ?items... ?a))"),
-
-        //     "(Fold Union (List (Fold Union (List ?list...)) ?rest...))" =>
-        //     "(Fold Union (List ?rest... ?list...))"),
-        // rw!("flatten_inter";
-        //     "(Fold Inter (List (Fold Inter (List ?list...)) ?rest...))" =>
-        //     "(Fold Inter (List ?rest... ?list...))"),
-
-        // rw!("union_consr"; "(Binop Union ?a (Fold Union ?list))" => "(Fold Union (Cons ?a ?list))"),
-        // rw!("inter_consr"; "(Binop Inter ?a (Fold Inter ?list))" => "(Fold Inter (Cons ?a ?list))"),
-        // rw!("list_nil"; "Nil" => "(List)"),
-        // rw!("list_cons"; "(Cons ?a (List ?b...))" => "(List ?a ?b...)"),
-        // rw!("nil_list"; "(List)" => "Nil"),
-        // rw!("cons_list"; "(List ?a ?b...)" => "(Cons ?a (List ?b...))"),
-
-
     ]
 }
 
 #[rustfmt::skip]
 pub fn rules() -> Vec<Rewrite> {
 
-    sz_param!(CAD_IDENTS: bool);
-    sz_param!(INV_TRANS: bool);
-
     let mut rules = vec![
-        // rw!("union_comm"; "(Binop Union ?a ?b)" => "(Binop Union ?b ?a)"),
-        // rw!("inter_comm"; "(Binop Inter ?a ?b)" => "(Binop Inter ?b ?a)"),
-        // rw!("fold_nil"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
-        // rw!("fold_cons"; "(Binop ?bop ?a (Fold ?bop ?list))" => "(Fold ?bop (Cons ?a ?list))"),
-        // rw!("union_consr"; "(Binop Union (Fold Union ?list) ?a)" => "(Fold Union (Cons ?a ?list))"),
-        // rw!("inter_consr"; "(Binop Inter (Fold Inter ?list) ?a)" => "(Fold Inter (Cons ?a ?list))"),
-
-        // rw("flatten_union",
-        //    "(Fold Union (List (Fold Union (List ?list...)) ?rest...))",
-        //    "(Fold Union (List ?rest... ?list...))"),
-        // rw("flatten_inter",
-        //    "(Fold Inter (List (Fold Inter (List ?list...)) ?rest...))",
-        //    "(Fold Inter (List ?rest... ?list...))"),
-
-
         // math rules
-
         rw!("add_comm"; "(+ ?a ?b)" => "(+ ?b ?a)"),
         rw!("add_zero"; "(+ 0 ?a)" => "?a"),
 
@@ -119,19 +83,11 @@ pub fn rules() -> Vec<Rewrite> {
             if is_not_zero("?a")),
         rw!("div_mul"; "(/ (* ?a ?b) ?a)" => "?b"
             if is_not_zero("?a")),
-        // rw!("mul_div_div"; "(* (/ ?a ?b) (/ ?c ?d))" => "(/ (* ?a ?c) (* ?b ?d))"),
-        // rw!("div_div"; "(/ (/ ?a ?b) ?a)" => "(/ 1 ?b)"),
 
         // list rules
-
         rw!("fold_nil"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
 
         // cad rules
-
-        // rw("diff_to_union",
-        //    "(Fold Diff (List ?a ?rest...))",
-        //    "(Binop Diff ?a (Fold Union (List ?rest...)))"),
-
         rw!("fold_repeat"; "(Fold ?bop (Map2 ?aff (Repeat ?n ?param) ?cads))"=> "(Affine ?aff ?param (Fold ?bop ?cads))"),
 
         rw!("fold_op"; "(Fold ?bop (Affine ?aff ?param ?cad))"=> "(Affine ?aff ?param (Fold ?bop ?cad))"),
@@ -159,19 +115,10 @@ pub fn rules() -> Vec<Rewrite> {
             "(MapI ?n1 ?n2 (Affine ?op ?formula ?cad))"
             if is_eq("?n", "(* ?n1 ?n2)")),
         rw!("mapi2_mapi2"; "(Map2 ?op (MapI ?n1 ?n2 ?param) (MapI ?n1 ?n2 ?cad))"=> "(MapI ?n1 ?n2 (Affine ?op ?param ?cad))"),
-
     ];
 
-    if *INV_TRANS {
+    if INV_TRANS {
         rules.extend(vec![
-            // rw("map_unpart_r",
-            //    "(Map2 ?op
-            //       (List ?params...)
-            //       (Unpart ?part ?cads))",
-            //    "(Map2 ?op
-            //       (Unpart ?part (Part ?part (List ?params...)))
-            //       (Unpart ?part ?cads))"),
-
             rw!("map_unpart_r2";
                "  (Map2 ?op ?params (Unpart ?part ?cads))" =>
                "(Unpart ?part (Part ?part
@@ -200,28 +147,6 @@ pub fn rules() -> Vec<Rewrite> {
                "(Unsort ?perm (Sort ?perm
               (Map2 ?op ?params (Unsort ?perm ?cads))))"),
 
-            // rw("sort_map2",
-            //    "(Sort ?perm (Map2 ?op ?params ?cads))",
-            //    "(Map2 ?op (Sort ?perm ?params) (Sort ?perm ?cads))"),
-
-            // rw("map_unsort_l",
-            //    "(Map2 ?op
-            //       (Unsort ?perm ?params)
-            //       ?cads)",
-            //    "(Unsort ?perm
-            //       (Map2 ?op
-            //         ?params
-            //         (Sort ?perm ?cads)))"),
-
-            // rw("map_unsort_r",
-            //    "(Map2 ?op
-            //       ?params
-            //       (Unsort ?perm ?cads))",
-            //    "(Unsort ?perm
-            //       (Map2 ?op
-            //         (Sort ?perm ?params)
-            //         ?cads))"),
-
             rw!("unsort_repeat"; "(Unsort ?perm (Repeat ?n ?elem))"=> "(Repeat ?n ?elem)"),
 
             rw!("fold_union_unsort"; "(Fold Union (Unsort ?perm ?x))"=> "(Fold Union ?x)"),
@@ -229,18 +154,10 @@ pub fn rules() -> Vec<Rewrite> {
 
             // unpolar
             rw!("unpolar_trans"; "(Map2 Trans (Unpolar ?n ?center ?params) ?cads)"=> "(Map2 Trans (Repeat ?n ?center) (Map2 TransPolar ?params ?cads))"),
-            // rw("unpolar_trans0",
-            //    "(Map2 Trans (Unpolar ?n (Vec3 0 0 0) ?params) ?cads)",
-            //    "(Map2 TransPolar ?params ?cads)"),
-
-
-            // rw("lift_op",
-            //    "(Binop Union (Affine ?op ?params ?a) (Affine ?op ?params ?b))",
-            //    "(Affine ?op ?params (Binop Union ?a ?b))"),
         ]);
     }
 
-    if *CAD_IDENTS {
+    if CAD_IDENTS {
         rules.extend(vec![
             rw!("scale_flip"; "(Affine Scale (Vec3 -1 -1 1) ?a)"=> "(Affine Rotate (Vec3 0 0 180) ?a)"),
 
@@ -250,14 +167,6 @@ pub fn rules() -> Vec<Rewrite> {
               (Affine Scale (Vec3 ?a ?b ?c) ?m))"),
 
             rw!("trans_scale"; "(Affine Trans (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?b ?c) ?m))"=> "(Affine Scale (Vec3 ?a ?b ?c) (Affine Trans (Vec3 (/ ?x ?a) (/ ?y ?b) (/ ?z ?c)) ?m))"),
-
-            // rw("scale_rotate",
-            //    "(Affine Scale (Vec3 ?a ?a ?a) (Affine Rotate (Vec3 ?x ?y ?z) ?m))",
-            //    "(Affine Rotate (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?a ?a) ?m))"),
-
-            // rw("rotate_scale",
-            //    "(Affine Scale (Vec3 ?a ?a ?a) (Affine Rotate (Vec3 ?x ?y ?z) ?m))",
-            //    "(Affine Rotate (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?a ?a) ?m))"),
 
             // primitives
 
@@ -309,9 +218,7 @@ pub fn rules() -> Vec<Rewrite> {
             ),
 
             // affine rules
-
             rw!("id"; "(Affine Trans (Vec3 0 0 0) ?a)"=> "?a"),
-
             rw!("combine_scale"; "(Affine Scale (Vec3 ?a ?b ?c) (Affine Scale (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Scale (Vec3 (* ?a ?d) (* ?b ?e) (* ?c ?f)) ?cad)"),
             rw!("combine_trans"; "(Affine Trans (Vec3 ?a ?b ?c) (Affine Trans (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Trans (Vec3 (+ ?a ?d) (+ ?b ?e) (+ ?c ?f)) ?cad)"),
 
@@ -365,7 +272,7 @@ pub fn rules() -> Vec<Rewrite> {
     ));
 
 
-    if *CAD_IDENTS {
+    if CAD_IDENTS {
         // add the intro rules only for cads
         let id_affines = &[
             ("scale", "Affine Scale (Vec3 1 1 1)"),
@@ -413,7 +320,7 @@ pub fn rules() -> Vec<Rewrite> {
 
 fn get_float(expr: &Cad) -> Option<Num> {
     match expr {
-        Cad::Num(f) => Some(f.clone()),
+        Cad::Num(f) => Some(*f),
         _ => None,
     }
 }
@@ -442,8 +349,7 @@ where
     K: Hash + Eq + Debug + Clone,
 {
     // allow easy disabling
-    sz_param!(PARTITIONING: bool);
-    if !*PARTITIONING {
+    if !PARTITIONING {
         return None;
     }
 
@@ -457,11 +363,9 @@ where
         ids.push(id);
     }
 
-    sz_param!(PARTITIONING_MAX: usize);
-    if parts.len() <= 1 || parts.len() > *PARTITIONING_MAX {
+    if parts.len() <= 1 || parts.len() > PARTITIONING_MAX {
         return None;
     }
-    // println!("parts: {:?}", parts);
 
     let mut order = Vec::new();
     let mut list_ids = vec![];
@@ -476,7 +380,7 @@ where
     let list_of_lists = egraph.add(Cad::List(list_ids));
     let concat = egraph.add(Cad::Unpart([part_id, list_of_lists]));
 
-    let perm = Permutation::from_vec(order);
+    let perm = Permutation::from_vec(&order);
     let res = if perm.is_ordered() {
         concat
     } else {
@@ -485,19 +389,10 @@ where
         egraph.add(e)
     };
 
-    // if !res.was_there {
-    //     debug!("Partition: {:?}", parts);
-    // }
-
-    return Some(res);
+    Some(res)
 }
 
 fn get_single_cad(egraph: &EGraph, id: Id) -> Cad {
-    // let nodes = &egraph[id].nodes;
-    // assert!(nodes.iter().all(|n| n == &nodes[0]));
-    // let n = &nodes[0];
-    // assert_eq!(n.children.len(), 0);
-    // n.op.clone()
     let best = &egraph[id].data.best;
     assert!(best.is_leaf());
     best.clone()
@@ -522,7 +417,6 @@ fn get_affines(egraph: &EGraph, id: Id, affine_kind: &Cad) -> Vec<(Id, Id)> {
         .collect()
 }
 
-sz_param!(AFFINE_SIGNATURE_MAX_LEN: usize);
 type AffineSig = [usize; 3];
 fn affine_signature(egraph: &EGraph, id: Id) -> AffineSig {
     let mut scales = 0;
@@ -545,9 +439,6 @@ fn affine_signature(egraph: &EGraph, id: Id) -> AffineSig {
     rotates = AFFINE_SIGNATURE_MAX_LEN.min(rotates);
     [translates, scales, rotates]
 }
-
-// HACK just part a hard limit here so it doesn't get out of hand
-sz_param!(STRUCTURE_MATCH_LIMIT: usize);
 
 fn insert_map2s(egraph: &mut EGraph, list_ids: &[Id]) -> Vec<Id> {
     let mut results = vec![];
@@ -574,17 +465,17 @@ fn insert_map2s(egraph: &mut EGraph, list_ids: &[Id]) -> Vec<Id> {
         let unique_sig_lengths = || unique_sigs.iter().map(|&sig| sig[cadi]);
 
         let total: usize = unique_sig_lengths().product();
-        if total > *STRUCTURE_MATCH_LIMIT {
+        if total > STRUCTURE_MATCH_LIMIT {
             warn!(
                 "Exceeding structure match limit: {} > {}",
-                total, *STRUCTURE_MATCH_LIMIT
+                total, STRUCTURE_MATCH_LIMIT
             );
         }
 
         for choices in unique_sig_lengths()
             .map(|len| 0..len)
             .multi_cartesian_product()
-            .take(*STRUCTURE_MATCH_LIMIT)
+            .take(STRUCTURE_MATCH_LIMIT)
         {
             let (param_ids, cad_ids): (Vec<Id>, Vec<Id>) = affs_list
                 .iter()
@@ -639,8 +530,6 @@ impl Applier<Cad, MetaAnalysis> for ListApplier {
         _rule_name: Symbol,
     ) -> Vec<Id> {
         let ids: Vec<Id> = get_meta_list!(egraph, map[self.var]).clone();
-        // println!("LISTAPPLIER: {:?}", ids);
-        // println!("ids: {:?}", ids);
         let bests: Vec<_> = ids.iter().map(|&id| egraph[id].data.best.clone()).collect();
         let ops: Option<Vec<_>> = ids
             .iter()
@@ -691,20 +580,8 @@ impl Applier<Cad, MetaAnalysis> for ListApplier {
             let len = vec_list.len();
             if len > 2 {
                 let solved = crate::solve::solve(egraph, &vec_list);
-                // if !solved.is_empty() {
-                //     for id in &solved {
-                //         println_cad(egraph, *id);
-                //     }
-                // }
                 results.extend(solved);
             }
-            // results.extend(partition_list(egraph, &ids, |i, _| {
-            //     let s0 = num_sign(vec_list[i].0);
-            //     let s1 = num_sign(vec_list[i].1);
-            //     let s2 = num_sign(vec_list[i].2);
-            //     (s0, s1, s2)
-            // }));
-            // try to partition things by coordinate
             results.extend(partition_list(egraph, &ids, |i, _| vec_list[i].0));
             results.extend(partition_list(egraph, &ids, |i, _| vec_list[i].1));
             results.extend(partition_list(egraph, &ids, |i, _| vec_list[i].2));
@@ -738,15 +615,8 @@ macro_rules! get_unit {
     ($egraph:expr, $eclass:expr, $cad:path) => {{
         let egraph = &$egraph;
         let eclass = $eclass;
-        // let nodes = &egraph[eclass_list[0]].nodes;
-        // if nodes.len() > 1 {
-        //     assert!(nodes[1..].iter().all(|n| n == &nodes[0]))
-        // }
         match &egraph[eclass].data.best {
-            $cad(p) => {
-                // assert_eq!(nodes[0].children.len(), 0);
-                p
-            }
+            $cad(p) => p,
             _ => panic!("expected {}", stringify!($cad)),
         }
     }};
@@ -861,7 +731,7 @@ impl Applier<Cad, MetaAnalysis> for UnpartApplier {
         assert_eq!(len_so_far, part.total_len());
         assert_eq!(len_so_far, big_perm.len());
 
-        let perm = Permutation::from_vec(big_perm);
+        let perm = Permutation::from_vec(&big_perm);
         let is_ordered = perm.is_ordered();
         let perm = egraph.add(Cad::Permutation(perm));
         let part = egraph.add(Cad::Partitioning(part));
@@ -912,7 +782,7 @@ impl Applier<Cad, MetaAnalysis> for SortUnpartApplier {
             {
                 return vec![];
             }
-            sorts.push(slice.iter().map(|i| i - len_so_far).collect());
+            sorts.push(slice.iter().map(|i| i - len_so_far).collect::<Vec<_>>());
             len_so_far += len;
         }
 
@@ -920,7 +790,7 @@ impl Applier<Cad, MetaAnalysis> for SortUnpartApplier {
             .into_iter()
             .zip(items)
             .map(|(p, list_id)| {
-                let perm = Permutation::from_vec(p);
+                let perm = Permutation::from_vec(&p);
                 let sort_id = egraph.add(Cad::Permutation(perm));
                 egraph.add(Cad::Sort([sort_id, list_id]))
             })
@@ -954,7 +824,7 @@ impl Applier<Cad, MetaAnalysis> for Flatten {
     ) -> Vec<Id> {
         fn get_nested_fold<'a>(egraph: &'a EGraph, op: &'a Cad, id: Id) -> Option<&'a [Id]> {
             let is_op = |i| egraph[i].nodes.iter().any(|c| c == op);
-            let get_list = |i| egraph[i].data.list.as_ref().map(Vec::as_slice);
+            let get_list = |i| egraph[i].data.list.as_deref();
             egraph[id]
                 .nodes
                 .iter()

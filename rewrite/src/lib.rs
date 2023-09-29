@@ -29,10 +29,28 @@ macro_rules! sz_param {
     }
 }
 
+// Repo-wise hyperparameters
+pub mod hyperparameters;
+
+// Base data and utilities
+pub mod base;
+
+// CAD language
 pub mod cad;
+
+// (internal) base structs for used in CAD
+mod cad_struct;
+
+// CAD cost
+pub mod cost;
+
+// Prune CAD egraph
+pub mod prune;
+
 pub mod rules;
 
 pub mod eval;
-pub mod num;
-mod permute;
 mod solve;
+
+// Export
+pub mod export;

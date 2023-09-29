@@ -1,5 +1,3 @@
-pub type Cost = f64;
-
 use egg::{Id, Language};
 
 use crate::{
@@ -7,7 +5,10 @@ use crate::{
     hyperparameters::{COST_BIG_VALUE, COST_SMALL_VALUE},
 };
 
+pub type Cost = f64;
+
 pub struct CostFn;
+
 impl egg::CostFunction<Cad> for CostFn {
     type Cost = Cost;
 

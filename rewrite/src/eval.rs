@@ -6,6 +6,12 @@ use crate::base::geom::to_cartesian;
 use crate::cad::Cad;
 use crate::cad_struct::{get_num, get_vec3_nums};
 
+// Given a sexpr, interpret the Expression. This is essentially from my understanding constant
+// folding
+pub fn eval(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Id {
+    eval_(cx, expr, p, out)
+}
+
 type FunCtx = HashMap<&'static str, usize>;
 
 fn mk_vec((x, y, z): (f64, f64, f64), out: &mut RecExpr<Cad>) -> Id {
@@ -34,7 +40,7 @@ fn eval_list(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<
     }
 }
 
-pub fn eval(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Id {
+fn eval_(cx: Option<&FunCtx>, expr: &RecExpr<Cad>, p: Id, out: &mut RecExpr<Cad>) -> Id {
     let e = expr[p].clone();
     match &e {
         Cad::BlackBox(ref b, args) => {

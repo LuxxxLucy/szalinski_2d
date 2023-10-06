@@ -2,7 +2,7 @@ use std::{fmt::Debug, hash::Hash, mem::discriminant};
 
 use indexmap::{IndexMap, IndexSet};
 use itertools::Itertools;
-use log::{info, warn};
+use log::warn;
 
 use egg::{rewrite as rw, *};
 
@@ -48,7 +48,7 @@ pub fn pre_rules() -> Vec<Rewrite> {
     vec![
         rw!("union_comm"; "(Binop Union ?a ?b)" => "(Binop Union ?b ?a)"),
         rw!("inter_comm"; "(Binop Inter ?a ?b)" => "(Binop Inter ?b ?a)"),
-        rw!("fold_nil"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
+        rw!("binary_op_fold"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
         rw!("fold_cons"; "(Binop ?bop ?a (Fold ?bop ?list))" => "(Fold ?bop (Cons ?a ?list))"),
 
         rw!(
@@ -89,7 +89,8 @@ pub fn math_rules() -> Vec<Rewrite> {
 pub fn list_rules() -> Vec<Rewrite> {
     // list rules
     vec![
-        rw!("fold_nil"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
+        // Binop Fold
+        rw!("binary_op_fold"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
     ]
 }
 

@@ -62,52 +62,55 @@ pub fn pre_rules() -> Vec<Rewrite> {
     ]
 }
 
-#[rustfmt::skip]
-pub fn rules() -> Vec<Rewrite> {
-
-    let mut rules = vec![
-        // math rules
+pub fn math_rules() -> Vec<Rewrite> {
+    // math rules
+    vec![
+        // add
         rw!("add_comm"; "(+ ?a ?b)" => "(+ ?b ?a)"),
         rw!("add_zero"; "(+ 0 ?a)" => "?a"),
 
+        // sub
         rw!("sub_zero"; "(- ?a 0)" => "?a"),
 
+        // mul
         rw!("mul_zero"; "(* 0 ?a)" => "0"),
         rw!("mul_one"; "(* 1 ?a)" => "?a"),
         rw!("mul_comm"; "(* ?a ?b)" => "(* ?b ?a)"),
-
-        rw!("div_one"; "(/ ?a 1)" => "?a"),
-        // rw!("mul_div"; "(* ?a (/ ?b ?a))" => "?b"),
-        // rw!("div_mul"; "(/ (* ?a ?b) ?a)" => "?b"),
         rw!("mul_div"; "(* ?a (/ ?b ?a))" => "?b"
             if is_not_zero("?a")),
+
+        // div
+        rw!("div_one"; "(/ ?a 1)" => "?a"),
         rw!("div_mul"; "(/ (* ?a ?b) ?a)" => "?b"
             if is_not_zero("?a")),
+    ]
+}
 
-        // list rules
+pub fn list_rules() -> Vec<Rewrite> {
+    // list rules
+    vec![
         rw!("fold_nil"; "(Binop ?bop ?a ?b)" => "(Fold ?bop (List ?a ?b))"),
+    ]
+}
 
-        // cad rules
+pub fn cad_rules() -> Vec<Rewrite> {
+    // rules related to the CAD domain
+    vec![
+        // Getting shared operation out
         rw!("fold_repeat"; "(Fold ?bop (Map2 ?aff (Repeat ?n ?param) ?cads))"=> "(Affine ?aff ?param (Fold ?bop ?cads))"),
 
         rw!("fold_op"; "(Fold ?bop (Affine ?aff ?param ?cad))"=> "(Affine ?aff ?param (Fold ?bop ?cad))"),
 
         rw!("union_trans"; "(Binop Union (Affine Trans (Vec3 ?x ?y ?z) ?a) (Affine Trans (Vec3 ?x ?y ?z) ?b))"=> "(Affine Trans (Vec3 ?x ?y ?z) (Binop Union ?a ?b))"),
 
-        rw!("inter_empty"; "(Binop Inter ?a Empty)"=> "Empty"),
-
-        // idempotent
+        // Related to Boolean Operators
         rw!("union_same"; "(Binop Union ?a ?a)"=> "?a"),
         rw!("inter_same"; "(Binop Inter ?a ?a)"=> "?a"),
-
         rw!("inter_union"; "(Binop Inter ?a (Binop Union ?a ?b))"=> "?a"),
+        rw!("inter_empty"; "(Binop Inter ?a Empty)"=> "Empty"),
 
-        // partitioning
-        rw!("concat"; "(Unpart ?part ?lists)"=> "(Concat ?lists)"),
-
+        // MapI: aka Tabulate
         rw!("repeat_mapi"; "(Repeat ?n ?x)"=> "(MapI ?n ?x)"),
-
-        // mapi
         rw!("map_repeat"; "(Map2 ?op (MapI ?n ?formula) (MapI ?n ?cad))"=> "(MapI ?n (Affine ?op ?formula ?cad))"),
 
         rw!("map_mapi2";
@@ -115,114 +118,158 @@ pub fn rules() -> Vec<Rewrite> {
             "(MapI ?n1 ?n2 (Affine ?op ?formula ?cad))"
             if is_eq("?n", "(* ?n1 ?n2)")),
         rw!("mapi2_mapi2"; "(Map2 ?op (MapI ?n1 ?n2 ?param) (MapI ?n1 ?n2 ?cad))"=> "(MapI ?n1 ?n2 (Affine ?op ?param ?cad))"),
+
+        // partitioning
+        rw!("concat"; "(Unpart ?part ?lists)"=> "(Concat ?lists)"),
+    ]
+}
+
+pub fn cad_identity_rules() -> Vec<Rewrite> {
+    // identity rules related to CAD transformation that can be reduced.
+    let mut rules = vec![
+        rw!("scale_flip"; "(Affine Scale (Vec3 -1 -1 1) ?a)"=> "(Affine Rotate (Vec3 0 0 180) ?a)"),
+
+        rw!("scale_trans";
+           "(Affine Scale (Vec3 ?a ?b ?c) (Affine Trans (Vec3 ?x ?y ?z) ?m))" =>
+           "(Affine Trans (Vec3 (* ?a ?x) (* ?b ?y) (* ?c ?z))
+          (Affine Scale (Vec3 ?a ?b ?c) ?m))"),
+
+        rw!("trans_scale"; "(Affine Trans (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?b ?c) ?m))"=> "(Affine Scale (Vec3 ?a ?b ?c) (Affine Trans (Vec3 (/ ?x ?a) (/ ?y ?b) (/ ?z ?c)) ?m))"),
+
+        rw!("cone_scale";
+           "(Cylinder (Vec3 ?h ?r1 ?r2) ?params ?center)" =>
+           "(Affine Scale (Vec3 1 1 ?h)
+            (Cylinder (Vec3 1 ?r1 ?r2) ?params ?center))"),
+
+        rw!("scale_cone";
+            "(Affine Scale (Vec3 1 1 ?h)
+              (Cylinder (Vec3 1 ?r1 ?r2) ?params ?center))" =>
+            "(Cylinder (Vec3 ?h ?r1 ?r2) ?params ?center)"
+            if is_pos(&["?h"])
+        ),
+
+        rw!("cylinder_scale";
+           "(Cylinder (Vec3 ?h ?r ?r) ?params ?center)" =>
+           "(Affine Scale (Vec3 ?r ?r ?h)
+          (Cylinder (Vec3 1 1 1) ?params ?center))"),
+        rw!("scale_cylinder";
+            "(Affine Scale (Vec3 ?r ?r ?h)
+          (Cylinder (Vec3 1 1 1) ?params ?center))" =>
+            "(Cylinder (Vec3 ?h ?r ?r) ?params ?center)"
+            if is_pos(&["?r", "?h"])
+        ),
+
+        rw!("cube_scale";
+           "(Cube (Vec3 ?x ?y ?z) ?center)" =>
+           "(Affine Scale (Vec3 ?x ?y ?z)
+          (Cube (Vec3 1 1 1) ?center))"),
+        rw!(
+            "scale_cube";
+            "(Affine Scale (Vec3 ?x ?y ?z)
+          (Cube (Vec3 1 1 1) ?center))" =>
+            "(Cube (Vec3 ?x ?y ?z) ?center)"
+            if is_pos(&["?x", "?y", "?z"])
+        ),
+
+        rw!("sphere_scale";
+           "(Sphere ?r ?params)" =>
+           "(Affine Scale (Vec3 ?r ?r ?r)
+          (Sphere 1 ?params))"),
+        rw!(
+            "scale_sphere";
+            "(Affine Scale (Vec3 ?r ?r ?r)
+          (Sphere 1 ?params))" =>
+            "(Sphere ?r ?params)"
+            if is_pos(&["?r"])
+        ),
+
+        rw!("id"; "(Affine Trans (Vec3 0 0 0) ?a)"=> "?a"),
+        rw!("combine_scale"; "(Affine Scale (Vec3 ?a ?b ?c) (Affine Scale (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Scale (Vec3 (* ?a ?d) (* ?b ?e) (* ?c ?f)) ?cad)"),
+        rw!("combine_trans"; "(Affine Trans (Vec3 ?a ?b ?c) (Affine Trans (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Trans (Vec3 (+ ?a ?d) (+ ?b ?e) (+ ?c ?f)) ?cad)"),
     ];
+        
+    // add the intro rules only for cads
+    let id_affines = &[
+        ("scale", "Affine Scale (Vec3 1 1 1)"),
+        ("trans", "Affine Trans (Vec3 0 0 0)"),
+        ("rotate", "Affine Rotate (Vec3 0 0 0)"),
+    ];
+    let possible_cads = &[
+        ("affine", "(Affine ?op ?param ?cad)"),
+        ("bop", "(Binop ?op ?cad1 ?cad2)"),
+        ("fold", "(Fold ?op ?cads)"),
+    ];
+    for (aff_name, id_aff) in id_affines {
+        for (cad_name, cad) in possible_cads {
+            let intro = format!("id_{}_{}_intro", aff_name, cad_name);
+            let outer: Pattern<_> = format!("({} {})", id_aff, cad).parse().unwrap();
+            let cad: Pattern<_> = cad.parse().unwrap();
+            rules.push(rw!(intro; cad => outer));
+        }
+
+        // elim rules work for everything
+        let elim = format!("id_{}_elim", aff_name);
+        let outer: Pattern<_> = format!("({} ?a)", id_aff).parse().unwrap();
+        rules.push(rw!(elim; outer => "?a"));
+    }
+    rules
+}
+
+pub fn inv_trans_rules() -> Vec<Rewrite> {
+    vec![
+        rw!("map_unpart_r2";
+           "  (Map2 ?op ?params (Unpart ?part ?cads))" =>
+           "(Unpart ?part (Part ?part
+          (Map2 ?op ?params (Unpart ?part ?cads))))"),
+        rw!("map_unpart_l2";
+           "  (Map2 ?op (Unpart ?part ?params) ?cads)" =>
+           "(Unpart ?part (Part ?part
+          (Map2 ?op (Unpart ?part ?params) ?cads)))"),
+
+        // NOTE do we need part/unpart id?
+        rw!("part_unpart"; "(Part ?part (Unpart ?part ?list))"=> "?list"),
+        rw!("unpart_part"; "(Unpart ?part (Part ?part ?list))"=> "?list"),
+
+        // unsort propagation
+        // rw!("sort_repeat"; "(Sort ?perm (Repeat ?n ?elem))"=> "(Repeat ?n ?elem)"),
+        rw!("sort_unsort"; "(Sort ?perm (Unsort ?perm ?list))"=> "?list"),
+        rw!("unsort_sort"; "(Unsort ?perm (Sort ?perm ?list))"=> "?list"),
+
+        rw!("map_unsort_l";
+           "  (Map2 ?op (Unsort ?perm ?params) ?cads)" =>
+           "(Unsort ?perm (Sort ?perm
+          (Map2 ?op (Unsort ?perm ?params) ?cads)))"),
+
+        rw!("map_unsort_r";
+           "  (Map2 ?op ?params (Unsort ?perm ?cads))" =>
+           "(Unsort ?perm (Sort ?perm
+          (Map2 ?op ?params (Unsort ?perm ?cads))))"),
+
+        rw!("unsort_repeat"; "(Unsort ?perm (Repeat ?n ?elem))"=> "(Repeat ?n ?elem)"),
+
+        rw!("fold_union_unsort"; "(Fold Union (Unsort ?perm ?x))"=> "(Fold Union ?x)"),
+        rw!("fold_inter_unsort"; "(Fold Inter (Unsort ?perm ?x))"=> "(Fold Inter ?x)"),
+
+        // unpolar
+        rw!("unpolar_trans"; "(Map2 Trans (Unpolar ?n ?center ?params) ?cads)"=> "(Map2 Trans (Repeat ?n ?center) (Map2 TransPolar ?params ?cads))"),
+    ]
+}
+
+#[rustfmt::skip]
+pub fn rules() -> Vec<Rewrite> {
+
+    let mut rules = vec![];
+
+    rules.extend(math_rules());
+    rules.extend(list_rules());
+    rules.extend(cad_rules());
 
     if INV_TRANS {
-        rules.extend(vec![
-            rw!("map_unpart_r2";
-               "  (Map2 ?op ?params (Unpart ?part ?cads))" =>
-               "(Unpart ?part (Part ?part
-              (Map2 ?op ?params (Unpart ?part ?cads))))"),
-            rw!("map_unpart_l2";
-               "  (Map2 ?op (Unpart ?part ?params) ?cads)" =>
-               "(Unpart ?part (Part ?part
-              (Map2 ?op (Unpart ?part ?params) ?cads)))"),
-
-            // NOTE do we need part/unpart id?
-            rw!("part_unpart"; "(Part ?part (Unpart ?part ?list))"=> "?list"),
-            rw!("unpart_part"; "(Unpart ?part (Part ?part ?list))"=> "?list"),
-
-            // unsort propagation
-            // rw!("sort_repeat"; "(Sort ?perm (Repeat ?n ?elem))"=> "(Repeat ?n ?elem)"),
-            rw!("sort_unsort"; "(Sort ?perm (Unsort ?perm ?list))"=> "?list"),
-            rw!("unsort_sort"; "(Unsort ?perm (Sort ?perm ?list))"=> "?list"),
-
-            rw!("map_unsort_l";
-               "  (Map2 ?op (Unsort ?perm ?params) ?cads)" =>
-               "(Unsort ?perm (Sort ?perm
-              (Map2 ?op (Unsort ?perm ?params) ?cads)))"),
-
-            rw!("map_unsort_r";
-               "  (Map2 ?op ?params (Unsort ?perm ?cads))" =>
-               "(Unsort ?perm (Sort ?perm
-              (Map2 ?op ?params (Unsort ?perm ?cads))))"),
-
-            rw!("unsort_repeat"; "(Unsort ?perm (Repeat ?n ?elem))"=> "(Repeat ?n ?elem)"),
-
-            rw!("fold_union_unsort"; "(Fold Union (Unsort ?perm ?x))"=> "(Fold Union ?x)"),
-            rw!("fold_inter_unsort"; "(Fold Inter (Unsort ?perm ?x))"=> "(Fold Inter ?x)"),
-
-            // unpolar
-            rw!("unpolar_trans"; "(Map2 Trans (Unpolar ?n ?center ?params) ?cads)"=> "(Map2 Trans (Repeat ?n ?center) (Map2 TransPolar ?params ?cads))"),
-        ]);
+        rules.extend(inv_trans_rules());
     }
 
     if CAD_IDENTS {
-        rules.extend(vec![
-            rw!("scale_flip"; "(Affine Scale (Vec3 -1 -1 1) ?a)"=> "(Affine Rotate (Vec3 0 0 180) ?a)"),
-
-            rw!("scale_trans";
-               "(Affine Scale (Vec3 ?a ?b ?c) (Affine Trans (Vec3 ?x ?y ?z) ?m))" =>
-               "(Affine Trans (Vec3 (* ?a ?x) (* ?b ?y) (* ?c ?z))
-              (Affine Scale (Vec3 ?a ?b ?c) ?m))"),
-
-            rw!("trans_scale"; "(Affine Trans (Vec3 ?x ?y ?z) (Affine Scale (Vec3 ?a ?b ?c) ?m))"=> "(Affine Scale (Vec3 ?a ?b ?c) (Affine Trans (Vec3 (/ ?x ?a) (/ ?y ?b) (/ ?z ?c)) ?m))"),
-
-            // primitives
-
-            rw!("cone_scale";
-               "(Cylinder (Vec3 ?h ?r1 ?r2) ?params ?center)" =>
-               "(Affine Scale (Vec3 1 1 ?h)
-                (Cylinder (Vec3 1 ?r1 ?r2) ?params ?center))"),
-
-            rw!("scale_cone";
-                "(Affine Scale (Vec3 1 1 ?h)
-                  (Cylinder (Vec3 1 ?r1 ?r2) ?params ?center))" =>
-                "(Cylinder (Vec3 ?h ?r1 ?r2) ?params ?center)"
-                if is_pos(&["?h"])
-            ),
-
-            rw!("cylinder_scale";
-               "(Cylinder (Vec3 ?h ?r ?r) ?params ?center)" =>
-               "(Affine Scale (Vec3 ?r ?r ?h)
-              (Cylinder (Vec3 1 1 1) ?params ?center))"),
-            rw!("scale_cylinder";
-                "(Affine Scale (Vec3 ?r ?r ?h)
-              (Cylinder (Vec3 1 1 1) ?params ?center))" =>
-                "(Cylinder (Vec3 ?h ?r ?r) ?params ?center)"
-                if is_pos(&["?r", "?h"])
-            ),
-
-            rw!("cube_scale";
-               "(Cube (Vec3 ?x ?y ?z) ?center)" =>
-               "(Affine Scale (Vec3 ?x ?y ?z)
-              (Cube (Vec3 1 1 1) ?center))"),
-            rw!(
-                "scale_cube";
-                "(Affine Scale (Vec3 ?x ?y ?z)
-              (Cube (Vec3 1 1 1) ?center))" =>
-                "(Cube (Vec3 ?x ?y ?z) ?center)"
-                if is_pos(&["?x", "?y", "?z"])
-            ),
-
-            rw!("sphere_scale";
-               "(Sphere ?r ?params)" =>
-               "(Affine Scale (Vec3 ?r ?r ?r)
-              (Sphere 1 ?params))"),
-            rw!(
-                "scale_sphere";
-                "(Affine Scale (Vec3 ?r ?r ?r)
-              (Sphere 1 ?params))" =>
-                "(Sphere ?r ?params)"
-                if is_pos(&["?r"])
-            ),
-
-            // affine rules
-            rw!("id"; "(Affine Trans (Vec3 0 0 0) ?a)"=> "?a"),
-            rw!("combine_scale"; "(Affine Scale (Vec3 ?a ?b ?c) (Affine Scale (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Scale (Vec3 (* ?a ?d) (* ?b ?e) (* ?c ?f)) ?cad)"),
-            rw!("combine_trans"; "(Affine Trans (Vec3 ?a ?b ?c) (Affine Trans (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Trans (Vec3 (+ ?a ?d) (+ ?b ?e) (+ ?c ?f)) ?cad)"),
-
-        ]);
+        rules.extend(cad_identity_rules());
     }
 
     rules.push(rw!(
@@ -270,48 +317,6 @@ pub fn rules() -> Vec<Rewrite> {
             SortUnpartApplier { sort, part, list }
         }
     ));
-
-
-    if CAD_IDENTS {
-        // add the intro rules only for cads
-        let id_affines = &[
-            ("scale", "Affine Scale (Vec3 1 1 1)"),
-            ("trans", "Affine Trans (Vec3 0 0 0)"),
-            ("rotate", "Affine Rotate (Vec3 0 0 0)"),
-        ];
-        let possible_cads = &[
-            ("affine", "(Affine ?op ?param ?cad)"),
-            ("bop", "(Binop ?op ?cad1 ?cad2)"),
-            ("fold", "(Fold ?op ?cads)"),
-        ];
-        for (aff_name, id_aff) in id_affines {
-            for (cad_name, cad) in possible_cads {
-                let intro = format!("id_{}_{}_intro", aff_name, cad_name);
-                let outer: Pattern<_> = format!("({} {})", id_aff, cad).parse().unwrap();
-                let cad: Pattern<_> = cad.parse().unwrap();
-                rules.push(rw!(intro; cad => outer));
-            }
-
-            // elim rules work for everything
-            let elim = format!("id_{}_elim", aff_name);
-            let outer: Pattern<_> = format!("({} ?a)", id_aff).parse().unwrap();
-            rules.push(rw!(elim; outer => "?a"));
-        }
-    }
-
-    if std::env::var("SUSPECT_RULES") == Ok("1".into()) {
-        // NOTE
-        // These will break other things
-        info!("Using suspect rules");
-        println!("Using suspect rules");
-        rules.extend(vec![
-            rw!("union_comm"; "(Binop Union ?a ?b)"=> "(Binop Union ?b ?a)"),
-            rw!("combine_scale"; "(Affine Scale (Vec3 ?a ?b ?c) (Affine Scale (Vec3 ?d ?e ?f) ?cad))"=> "(Affine Scale (Vec3 (* ?a ?d) (* ?b ?e) (* ?c ?f)) ?cad)"),
-        ]);
-    } else {
-        info!("Not using suspect rules");
-        println!("Not using suspect rules");
-    }
 
     println!("Using {} rules", rules.len());
 
